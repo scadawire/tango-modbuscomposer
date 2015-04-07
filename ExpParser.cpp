@@ -1,0 +1,1251 @@
+/*
+  File:        ExpParser.cpp
+  Description: A simple expression parser
+  Author:      J-L PONS
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+*/
+
+//=============================================================================
+//
+// $Author: pons $
+//
+// $Revision: 1.2 $
+//
+// $Log: $
+//
+//=============================================================================
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <malloc.h>
+#include <math.h>
+#include <errno.h>
+
+namespace ModbusComposer_ns
+{
+class ExpParser;
+}
+
+#include <ExpParser.h>
+
+namespace ModbusComposer_ns
+{
+
+#include <CalcFunc.h>
+
+// -------------------------------------------------------
+// Utils functions
+// -------------------------------------------------------
+
+// Add a character to a string
+static void stradd(char *s,char c)
+{
+  int l=(int)strlen(s);
+  s[l]=c;
+  s[l+1]=0;
+}
+
+// free a tree
+static void free_tree(ETREE *t) {
+  if(t->left!=NULL)  free_tree(t->left);
+  if(t->right!=NULL) free_tree(t->right);
+  free(t);
+}
+
+static void safe_free_tree(ETREE **t)
+{
+  if(*t!=NULL) {
+    free_tree(*t);
+    *t=NULL;
+  }
+}
+
+// -------------------------------------------------------
+// ExpParser
+// -------------------------------------------------------
+
+ExpParser::ExpParser(ModbusComposer *parent) {
+
+  this->parent = parent;
+  evalTree=NULL;
+  writeTree=NULL;
+  memset(expr,0,sizeof(expr));  
+  strcpy(name,"");
+  strcpy(status,"");
+  state = Tango::UNKNOWN;
+
+}
+
+// -------------------------------------------------------
+
+ExpParser::~ExpParser() {
+  safe_free_tree(&evalTree);
+  safe_free_tree(&writeTree);
+}
+
+// -------------------------------------------------------
+
+char *ExpParser::GetName() {
+  return name;
+}
+
+// -------------------------------------------------------
+
+long ExpParser::GetType() {
+  return type;
+}
+
+// -------------------------------------------------------
+
+void ExpParser::SetExpression(char *expr) {
+  if(strlen(expr)>sizeof(this->expr)) 
+    SetError((char *)"Expression too long");
+  strcpy(this->expr,expr);
+}
+
+// -------------------------------------------------------
+
+char *ExpParser::GetExpression() {
+  return expr;
+}
+
+// -------------------------------------------------------
+// Return true if next string match given string 
+
+bool ExpParser::Match(string word)
+{
+  char s[128];
+  int i;
+  int lg = word.length();
+  s[0]=0;
+  for(i=current;i<current+lg;i++)
+    stradd(s,expr[i]);
+
+  return strcasecmp(s,word.c_str())==0;
+}
+
+// -------------------------------------------------------
+
+void ExpParser::AV()
+{
+  // Return fisrt significative char in the string to analyse 
+  do {
+    current++;
+    EC=expr[current];
+  } while (current<exprLgth && (EC==' ' || EC=='\t'));
+}
+
+void ExpParser::AV(int n) {
+  for(int i=0;i<n;i++)
+    AV();
+}
+
+// -------------------------------------------------------
+
+void ExpParser::SetError(char *err,int p) {
+
+  char errMsg[512];
+
+  if(p>=0)
+    sprintf(errMsg,"%s at %d",err,p);
+  else
+    strcpy(errMsg,err);
+
+  Tango::Except::throw_exception(	    
+      (const char *)"ExpParser::error",
+      (const char *)errMsg,
+      (const char *)"ExpParser::SetError"); 
+
+}
+
+
+// -------------------------------------------------------
+
+void ExpParser::AddNode(CALCFN fn , ETREE_NODE info ,
+                        ETREE **t,ETREE *left,ETREE *right) {
+
+  // Add node into the evaluation tree
+  ETREE *elem;
+  elem=(ETREE *)malloc(sizeof(ETREE));
+  elem->calc_fn=fn;
+  elem->info=info;
+  elem->left=left;
+  elem->right=right;
+
+  *t=elem;
+
+}
+
+// -------------------------------------------------------
+// Gramar functions
+// -------------------------------------------------------
+
+void ExpParser::ReadDouble(double *R)
+{
+  char S[128];
+  char ex[128];
+  int  c;
+  int  p;
+  int  nega;
+  int  n;
+
+  S[0]=0;
+  ex[0]=0;
+  p=current;
+
+  if( Match("0x") ) {
+    // We have an hexadecimal number
+    ReadInteger(&n);
+    *R = (double)n;
+    return;
+  }
+
+  do {
+    stradd(S,EC);
+    AV();
+  } while ( (EC>='0' && EC<='9') || EC=='.' );
+
+  if (EC=='E' || EC=='e') {
+    AV();
+    nega=false;
+
+    if (EC=='-') {
+      nega=true;
+      AV();
+    }
+
+    while (EC>='0' && EC<='9')
+    {
+      stradd(ex,EC);
+      AV();
+    }
+    c=sscanf(ex,"%d",&n);
+    if (c==0) { SetError((char *)"Incorrect exposant in number",p);return; }
+    if (nega) { strcat(S,"e-");strcat(S,ex);}
+    else      { strcat(S,"e");strcat(S,ex); }
+  }
+
+  c=sscanf(S,"%lf",R);  
+  if (c==0) SetError((char *)"Incorrect number",p);
+
+}
+
+// -------------------------------------------------------
+
+bool ExpParser::IsLetter(char c) {
+
+  return (EC>='A' && EC<='Z') || (EC>='a' && EC<='z') || (EC=='_');
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadInteger(int *R)
+{
+  char S[128];
+  char ex[128];
+  int  c;
+  int  p;
+  int  isHexa;
+
+  S[0]=0;
+  ex[0]=0;
+  p=current;
+
+  isHexa = Match("0x");
+  if(isHexa) {
+
+    stradd(S,EC);AV();
+    stradd(S,EC);AV();
+
+    do {
+      stradd(S,EC);
+      AV();
+    } while ( (EC>='0' && EC<='9') || (EC>='A' && EC<='F') || (EC>='a' && EC<='f') );
+
+  } else {
+
+    do {
+      stradd(S,EC);
+      AV();
+    } while ( (EC>='0' && EC<='9') );
+  
+  }
+  
+  if( strlen(S)==0 ) SetError((char *)"Incorrect integer number",p);
+
+  if( isHexa ) {
+    errno=0;
+    *R = strtol(S,NULL,16);
+    if(errno!=0) SetError((char *)"Incorrect hexadecimal number",p);
+  } else {
+    c=sscanf(S,"%d",R);
+    if (c==0) SetError((char *)"Incorrect integer number",p);
+  }
+  
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadName( char *name ) {
+
+  int i=0;
+  int p;
+  p=current;
+  
+  /*
+  if( !IsLetter(EC) ) {
+    error = true;
+    SetError((char *)"Name expected",p);
+    return;
+  }
+  */
+
+  name[0]=0;
+  do {
+
+    stradd(name,EC);
+    AV();
+    i++;
+    if(i>=MAXLENGHT) SetError((char *)"Variable name too long",p);
+
+  } while (
+     (EC>='A' && EC<='Z') || 
+     (EC>='a' && EC<='z') ||
+     (EC>='0' && EC<='9') ||
+     (EC=='_'));
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadTerm(ETREE **node)
+{
+  ETREE *l_t=NULL;
+  ETREE *r_t=NULL;
+  ETREE_NODE elem;
+  memset(&elem,0,sizeof(ETREE_NODE));
+
+  switch(EC) {
+
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    case '.':  ReadDouble(&(elem.constant));
+               AddNode( OPER_DOUBLE , elem , node , NULL , NULL);
+               break;
+         
+    case '(' : AV();
+               ReadExpression(node);
+               if (EC!=')') SetError((char *)") expected",current);
+               AV();
+               break;
+
+    // -------------------------------------------------------
+    // unary operator
+    // -------------------------------------------------------
+
+    case '-' :AV();
+              ReadTerm(&l_t);
+              AddNode( OPER_MINUS1 , elem , node , l_t , NULL);
+              break;
+
+    case '~' :AV();
+              ReadTerm(&l_t);
+              AddNode( OPER_NEG , elem , node , l_t , NULL);
+	      break;
+
+    case 'N':	
+    case 'n': if( Match("not") ) {
+                AV(3);
+                ReadTerm(&l_t);
+		AddNode( OPER_NOT , elem , node , l_t , NULL);    
+    	      } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+	break;
+
+    // -------------------------------------------------------
+    // Math functions
+    // -------------------------------------------------------
+
+    case 'a':
+    case 'A': if ( Match("abs(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                AddNode( OPER_ABS , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("asin(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_ASIN , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("acos(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_ACOS , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else  if ( Match("atan(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_ATAN , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'S':
+    case 's': if ( Match("sin(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                AddNode( OPER_SIN , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("sqrt(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_SQRT , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("sinh(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_SINH , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("sum(") ) {
+                AV(4);
+                if( (EC>='A' && EC<='Z') || 
+                    (EC>='a' && EC<='z') ||
+                    (EC=='_')) 
+                {
+                  char tmpVName[MAXLENGHT];
+                  double d1,d2;
+                  int i,i1,i2;
+
+                  ReadName((char *)tmpVName);
+                  if (EC!=',') SetError((char *)", expected",current);AV();
+                  ReadDouble(&d1);
+                  if (EC!=',') SetError((char *)", expected",current);AV();
+                  ReadDouble(&d2);
+                  if (EC!=')') SetError((char *)") expected",current);AV();
+
+                  // Add all variables
+                  i1 = (int)(d1+0.5);
+                  i2 = (int)(d2+0.5);
+
+                  // 1st
+                  sprintf(elem.name,"%s%d",tmpVName,i1);
+                  AddNode( OPER_NAME , elem , &l_t , NULL , NULL);
+
+                  for(i=i1+1;i<=i2;i++) {
+                    sprintf(elem.name,"%s%d",tmpVName,i);
+                    AddNode( OPER_NAME , elem , &r_t , NULL , NULL);
+                    AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
+                  }
+                  *node = l_t;
+
+                } else {
+                  SetError((char *)"variable prefix name expected",current);
+                }
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'C':
+    case 'c': if ( Match("cos(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                AddNode( OPER_COS , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("cosh(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_COSH , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'E':
+    case 'e': if ( Match("exp(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                AddNode( OPER_EXP , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'D':
+    case 'd':  if ( Match("dreg(") ) {
+                int idx;
+                AV(5);
+                ReadInteger(&idx);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = 1;
+                AddNode( OPER_DREG , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();	      
+	      } else if ( Match("dregs(") ) {
+                int idx,lgth;
+                AV(6);
+                ReadInteger(&idx);
+		if (EC!=',') SetError((char *)", expected",current);AV();
+                ReadInteger(&lgth);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = lgth;
+                AddNode( OPER_DREGS , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();	      
+	      } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'F':
+    case 'f': if ( Match("fact(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_FACT , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("flag(") ) {
+                int idx,bit;
+                AV(5);
+                ReadInteger(&idx);
+		if (EC!=',') SetError((char *)", expected",current);AV();
+                ReadInteger(&bit);
+		elem.flaginfo.idx = idx;
+		elem.flaginfo.bit = bit;
+                AddNode( OPER_FLAG , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();	      
+	      } else if ( Match("freg(") ) {
+                int idx;
+                AV(5);
+                ReadInteger(&idx);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = 1;
+                AddNode( OPER_FREG , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();	      
+	      } else if ( Match("fregs(") ) {
+                int idx,lgth;
+                AV(6);
+                ReadInteger(&idx);
+		if (EC!=',') SetError((char *)", expected",current);AV();
+                ReadInteger(&lgth);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = lgth;
+                AddNode( OPER_FREGS , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();	      
+	      } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'I':
+    case 'i': if ( Match("inv(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                AddNode( OPER_INV , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+    
+    case 'L':
+    case 'l': if ( Match("ln(") ) {
+                AV(3);
+                ReadExpression(&l_t);
+                AddNode( OPER_LN , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("log2(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_LOG2 , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("log10(") ) {
+                AV(6);
+                ReadExpression(&l_t);
+                AddNode( OPER_LOG10 , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'T':
+    case 't': if ( Match("tan(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                AddNode( OPER_TAN , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("tanh(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_TANH , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'r':
+    case 'R': if ( Match("reg(") ) {
+                int idx;
+		AV(4);
+                ReadInteger(&idx);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = 1;
+                AddNode( OPER_REG , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("regs(") ) {
+                int idx,lgth;
+                AV(5);
+                ReadInteger(&idx);
+		if (EC!=',') SetError((char *)", expected",current);
+		AV();
+                ReadInteger(&lgth);
+		if(lgth>MAXVALUELENGTH) SetError((char *)"regs(): too many registers",current);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = lgth;
+                AddNode( OPER_REGS , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'u':
+    case 'U': if ( Match("ureg(") ) {
+                int idx;
+		AV(5);
+                ReadInteger(&idx);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = 1;
+                AddNode( OPER_UREG , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("uregs(") ) {
+                int idx,lgth;
+                AV(6);
+                ReadInteger(&idx);
+		if (EC!=',') SetError((char *)", expected",current);
+		AV();
+                ReadInteger(&lgth);
+		if(lgth>MAXVALUELENGTH) SetError((char *)"uregs(): too many registers",current);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = lgth;
+                AddNode( OPER_UREGS , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    // -------------------------------------------------------
+    // Constants
+    // -------------------------------------------------------
+
+    case 'P':
+    case 'p': if ( Match("pi") ) {
+                AV(2);
+                elem.constant=3.14159265358979323846;
+                AddNode( OPER_DOUBLE , elem , node , NULL , NULL);
+              } else if ( Match("pow(") ) {
+                AV(4);
+                ReadExpression(&l_t);
+                if (EC!=',') SetError((char *)", expected",current);
+                AV();
+                ReadExpression(&r_t);
+                AddNode( OPER_POW , elem , node , l_t , r_t);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    default: if( (EC>='A' && EC<='Z') || 
+                 (EC>='a' && EC<='z') ||
+                 (EC=='_')) 
+             {
+               ReadName((char *)elem.name);
+               AddNode( OPER_NAME , elem , node , NULL , NULL);
+             } else
+               SetError((char *)"Syntax error",current);
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadExpression(ETREE **node) {
+
+  ETREE *l_t=NULL;
+  ETREE *r_t=NULL;
+  ETREE_NODE elem;
+  memset(&elem,0,sizeof(ETREE_NODE));
+
+  ReadFactor1(&l_t);
+  if (EC=='&')
+  {
+    AV();
+    ReadFactor1(&r_t);
+    AddNode( OPER_AND , elem , node , l_t , r_t );
+  } else if (EC=='|') {
+    AV();
+    ReadFactor1(&r_t);
+    AddNode( OPER_OR , elem , node , l_t , r_t );
+  } else if (EC=='^') {
+    AV();
+    ReadFactor1(&r_t);
+    AddNode( OPER_XOR , elem , node , l_t , r_t );
+  } else {
+    *node=l_t;
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadFactor1(ETREE **node) {
+
+  ETREE *l_t=NULL;
+  ETREE *r_t=NULL;
+  ETREE_NODE elem;
+  memset(&elem,0,sizeof(ETREE_NODE));
+
+  ReadFactor2(&l_t);
+  if ((EC=='<') && Match("<=") )
+  {
+    AV(2);
+    ReadFactor2(&r_t);
+    AddNode( OPER_LWEQ , elem , node , l_t , r_t );
+  } else if ((EC=='<') && !Match("<=") && !Match("<<") ) {
+    AV();
+    ReadFactor2(&r_t);
+    AddNode( OPER_LW , elem , node , l_t , r_t );
+  } else if ((EC=='>') && Match(">=") ) {
+    AV(2);
+    ReadFactor2(&r_t);
+    AddNode( OPER_GTEQ , elem , node , l_t , r_t );
+  } else if ((EC=='>') && !Match(">=") && !Match(">>") ) {
+    AV();
+    ReadFactor2(&r_t);
+    AddNode( OPER_GT , elem , node , l_t , r_t );
+ } else if ((EC=='=') && Match("==") ) {
+    AV(2);
+    ReadFactor2(&r_t);
+    AddNode( OPER_EQ , elem , node , l_t , r_t );
+  } else if ((EC=='!') && Match("!=") ) {
+    AV(2);
+    ReadFactor2(&r_t);
+    AddNode( OPER_NEQ , elem , node , l_t , r_t );
+  } else {
+    *node=l_t;
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadFactor2(ETREE **node) {
+
+  ETREE *l_t=NULL;
+  ETREE *r_t=NULL;
+  ETREE_NODE elem;
+  memset(&elem,0,sizeof(ETREE_NODE));
+
+  ReadFactor3(&l_t);
+  if ((EC=='<') && Match("<<"))
+  {
+    AV(2);
+    ReadFactor3(&r_t);
+    AddNode( OPER_LSHIFT , elem , node , l_t , r_t );
+  } else if ( (EC=='>') && Match(">>") ) {
+    AV(2);
+    ReadFactor3(&r_t);
+    AddNode( OPER_RSHIFT , elem , node , l_t , r_t );
+  } else {
+    *node=l_t;
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadFactor3(ETREE **node)
+{
+  ETREE *l_t=NULL;
+  ETREE *r_t=NULL;
+  ETREE_NODE elem;
+  memset(&elem,0,sizeof(ETREE_NODE));
+
+  ReadFactor4(&l_t);
+
+  while(EC=='+' || EC=='-')
+  {
+    switch(EC) {
+    case '+': AV();
+              ReadFactor4(&r_t);
+              AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
+              break;
+
+    case '-': AV();
+              ReadFactor4(&r_t);
+              AddNode( OPER_MINUS , elem , &l_t , l_t , r_t );
+              break;
+    }
+  }
+  *node=l_t;
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadFactor4(ETREE **node)
+{
+  ETREE *l_t=NULL;
+  ETREE *r_t=NULL;
+  ETREE_NODE elem;
+  memset(&elem,0,sizeof(ETREE_NODE));
+
+  ReadTerm(&l_t);
+
+  while(EC=='*' || EC=='/')
+  {
+    switch(EC) {
+    case '*': AV();
+              ReadTerm(&r_t);
+              AddNode( OPER_MUL , elem , &l_t , l_t , r_t );
+              break;
+
+    case '/': AV();
+              ReadTerm(&r_t);
+              AddNode( OPER_DIV , elem , &l_t , l_t , r_t );
+              break;
+    }
+  }
+  *node=l_t;
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadType() {
+
+  char tName[256];
+  ReadName(tName);
+
+  if( strcasecmp(tName,"DevBoolean")==0 ) {	    	  	
+    isSpectrum = false;
+    type = Tango::DEV_BOOLEAN;
+  } else if ( strcasecmp(tName,"DevShort")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_SHORT;
+  } else if ( strcasecmp(tName,"DevDouble")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_DOUBLE;
+  } else if ( strcasecmp(tName,"DevLong")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_LONG;
+  } else if ( strcasecmp(tName,"DevVarDoubleArray")==0 ) {
+    isSpectrum = true;
+    type = Tango::DEV_DOUBLE;
+  } else {
+    char tmpErr[128];
+    sprintf(tmpErr,"Type %s not suported",tName);
+    SetError(tmpErr);
+  }
+
+
+}
+
+// -------------------------------------------------------
+
+string TG_STATE[] = { "ON", "OFF", "CLOSE", "OPEN", "INSERT", "EXTRACT", "MOVING", "STANDBY", "FAULT", 
+                      "INIT", "RUNNING", "ALARM", "DISABLE", "UNKNOWN" };
+
+void ExpParser::ReadState() {
+
+  char tName[256];
+  ReadName(tName);
+
+  bool found = false;
+  int nbState = sizeof(TG_STATE)/sizeof(char *);
+  int i = 0;
+  
+  while( !found && i<nbState ) {
+    found = strcasecmp(TG_STATE[i].c_str(),tName)==0;
+    if(!found) i++;
+  }
+
+  if(!found) {
+    state = Tango::UNKNOWN;
+    char tmpErr[128];
+    sprintf(tmpErr,"Unknown Tango state %s",tName);
+    SetError(tmpErr);
+  } else {
+    state = (Tango::DevState)i;
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadWriteFn() {
+
+  char fName[256];
+  ReadName(fName);
+
+  if( strcasecmp(fName,"WriteInt")==0 ) {
+    regWriteType = REG_INT;
+  } else if ( strcasecmp(fName,"WriteUInt")==0 ) {
+    regWriteType = REG_UINT; 	  	
+  } else if ( strcasecmp(fName,"WriteLong")==0 ) {
+    regWriteType = REG_LONG; 	  	
+  } else if ( strcasecmp(fName,"WriteULong")==0 ) {
+    regWriteType = REG_ULONG; 	  	
+  } else if ( strcasecmp(fName,"WriteFloat")==0 ) {
+    regWriteType = REG_FLOAT; 	  	
+  } else if ( strcasecmp(fName,"WriteDouble")==0 ) {
+    regWriteType = REG_DOUBLE; 	  	
+  } else if ( strcasecmp(fName,"WriteCoil")==0 ) {
+    regWriteType = REG_COIL; 	  	
+  } else {
+    char tmpErr[128];
+    sprintf(tmpErr,"Write function %s not suported",fName);
+    SetError(tmpErr);
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ParseState()
+{
+
+  exprLgth = strlen(expr);
+  if( exprLgth==0 )
+    SetError((char *)"Empty expression");
+
+  current=0;
+  EC=expr[0];
+
+  safe_free_tree(&evalTree);
+  safe_free_tree(&writeTree);
+  
+  ReadState();
+  if(EC!='=') SetError((char *)"= expected",current);AV();
+  ReadExpression(&evalTree);
+
+  if(EC==',') {
+    // We have a status message
+    AV();
+    while(current<exprLgth) {
+      stradd(status,expr[current]);
+      current++;
+    }
+  }
+  
+  if(current!=exprLgth)
+    SetError((char *)"Syntax error",current);
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::Parse()
+{
+
+  exprLgth = strlen(expr);
+  if( exprLgth==0 )
+    SetError((char*)"Empty expression");
+
+  current=0;
+  EC=expr[0];
+
+  safe_free_tree(&evalTree);
+  safe_free_tree(&writeTree);
+  
+  ReadName(name);
+  if(EC!='=') SetError((char *)"= expected",current);AV();
+  ReadType();
+  if(EC!='(') SetError((char *)"( expected",current);AV();
+  ReadExpression(&evalTree);
+
+  if(EC==',') {
+    // We have a write definition
+    AV();
+    ReadWriteFn();
+    if(EC!='(') SetError((char *)"( expected",current);AV();
+    ReadInteger(&writeAddress);
+    if(EC!=',') SetError((char *)", expected",current);AV();
+    ReadExpression(&writeTree);
+    if(EC!=')') SetError((char *)") expected",current);AV();
+  }
+
+  if (EC!=')') SetError((char *)") expected",current);AV();
+  
+  if(current!=exprLgth)
+    SetError((char *)"Syntax error",current);
+
+}
+
+/*
+void printBin(double *add) {
+
+  unsigned char *p = (unsigned char *)add;
+  printf("0x");
+  for(int i=7;i>=0;i--)
+    printf("%02X",*(p+i));
+
+  unsigned int p7 = (int)(*(p+7));
+  unsigned int p6 = (int)(*(p+6));
+  unsigned int ph = (p7<<8) + p6;
+
+  int e = ((ph & 0x7FF0)>>4) - 1023;
+  printf("(e=%d)",e);
+
+}
+*/
+
+// -------------------------------------------------------
+
+void ExpParser::FloatToRegisters(float f,unsigned short *r1,unsigned short *r2) {
+
+  unsigned char *ptr = (unsigned char *)&f;
+  *r1  = ptr[0] & 0xFF;
+  *r1 |= ptr[1] << 8;
+  *r2  = ptr[2] & 0xFF;
+  *r2 |= ptr[3] << 8;
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::DoubleToRegisters(double f,unsigned short *r1,unsigned short *r2,unsigned short *r3,unsigned short *r4) {
+
+  unsigned char *ptr = (unsigned char *)&f;
+  *r1  = ptr[0] & 0xFF;
+  *r1 |= ptr[1] << 8;
+  *r2  = ptr[2] & 0xFF;
+  *r2 |= ptr[3] << 8;
+  *r3  = ptr[4] & 0xFF;
+  *r3 |= ptr[5] << 8;
+  *r4  = ptr[6] & 0xFF;
+  *r4 |= ptr[7] << 8;
+
+}
+
+// -------------------------------------------------------
+
+VALUE ExpParser::EvalTree(ETREE *t) {
+
+  VALUE a,b;
+  if(t->left)  a=EvalTree(t->left);
+  if(t->right) b=EvalTree(t->right);
+  return t->calc_fn(this,&(t->info),&a,&b);
+
+}
+
+// -------------------------------------------------------
+
+vector<short> ExpParser::ReadModbusReg( int address , int length ) {
+
+  return parent->regs(address,length);
+
+}
+
+// -------------------------------------------------------
+
+double ExpParser::ReadAttribute(char *attName) {
+  
+  return parent->read_self_attribute(attName);
+
+}
+
+// -------------------------------------------------------
+
+int ExpParser::GetCurrentPos() {
+  return current;
+}
+
+// -------------------------------------------------------
+
+double ExpParser::GetWriteValue() {
+
+  return writeVALUE;
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::EvaluateWrite(double wValue) {
+
+  writeVALUE = wValue;
+  VALUE result;
+  errno=0;
+
+  /* Evaluate expression */
+  
+  if(writeTree==NULL) SetError((char *)"Write evaluation expression not initialised");
+  result=EvalTree(writeTree);
+
+  /* Now write */
+  vector<short> input;
+  unsigned short r1,r2,r3,r4;
+  int v;
+  unsigned int uv;
+
+  switch(regWriteType) {
+
+    case REG_INT:
+      parent->write_reg(writeAddress,(short)(result.value[0]+0.5));
+      break;
+
+    case REG_UINT:
+      r1 = US(result.value[0]);
+      parent->write_reg(writeAddress,r1);      
+      break;
+
+    case REG_LONG:
+      v = (int)(result.value[0]+0.5);
+      uv = (unsigned int)v;
+      r1 = (unsigned short)( uv >> 16 );
+      r2 = (unsigned short)( uv & 0xFFFF );
+      input.push_back(r1);
+      input.push_back(r2);
+      parent->write_regs(writeAddress,input);
+      break;
+
+    case REG_ULONG:
+      uv = (unsigned int)(result.value[0]+0.5);
+      r1 = (unsigned short)( uv >> 16 );
+      r2 = (unsigned short)( uv & 0xFFFF );
+      input.push_back(r1);
+      input.push_back(r2);
+      parent->write_regs(writeAddress,input);
+      break;
+
+    case REG_FLOAT:
+      FloatToRegisters((float)result.value[0],&r1,&r2);
+      input.push_back(r1);
+      input.push_back(r2);
+      parent->write_regs(writeAddress,input);
+      break;
+
+    case REG_DOUBLE:
+      DoubleToRegisters(result.value[0],&r1,&r2,&r3,&r4);
+      input.push_back(r1);
+      input.push_back(r2);
+      input.push_back(r3);
+      input.push_back(r4);
+      parent->write_regs(writeAddress,input);
+      break;
+
+    case REG_COIL:
+      parent->write_coil(writeAddress,(short)(result.value[0]+0.5));
+      break;
+  }
+
+}
+
+// -------------------------------------------------------
+
+bool ExpParser::GetBoolResult(VALUE r) {
+
+  unsigned int n = UI(r.value[0]);
+  return n!=0;
+
+}
+
+// -------------------------------------------------------
+
+bool ExpParser::HasWriteExpression() {
+  return writeTree!=NULL;
+}
+
+// -------------------------------------------------------
+
+bool ExpParser::IsSpectrum() {
+  return isSpectrum;
+}
+
+// -------------------------------------------------------
+
+Tango::DevState ExpParser::GetState() {
+  return state;
+}
+
+// -------------------------------------------------------
+
+char *ExpParser::GetStatus() {
+  return status;
+}
+
+// -------------------------------------------------------
+
+void ExpParser::EvaluateRead(VALUE *result) {
+  errno=0;
+  if(evalTree==NULL) SetError((char *)"Read evaluation expression not initialised");
+  *result=EvalTree(evalTree);
+}
+
+} // namespace ModbusComposer_ns
+

@@ -82,33 +82,29 @@ class DynAttribute: public Tango::Attr {
        
 	 case Tango::DEV_BOOLEAN:
 	 {
-	   Tango::DevBoolean *_retBoolean = new Tango::DevBoolean;
-	   *_retBoolean = _ep->GetBoolResult(r);
-	   attr.set_value(_retBoolean,1,0,true);
+	   _ep->bValue = _ep->GetBoolResult(r);
+	   attr.set_value(&_ep->bValue);
          }
 	 break;
 	 
 	 case Tango::DEV_SHORT:
          {
-	   Tango::DevShort *_retShort = new Tango::DevShort;
-	   *_retShort = (Tango::DevShort)(r.value[0]+0.5);
-	   attr.set_value(_retShort,1,0,true);
+	   _ep->sValue = (Tango::DevShort)(r.value[0]+0.5);
+	   attr.set_value(&_ep->sValue);
          }
 	 break;
 	 
 	 case Tango::DEV_DOUBLE:
          {
-	   Tango::DevDouble *_retDouble = new Tango::DevDouble;
-	   *_retDouble = r.value[0];
-	   attr.set_value(_retDouble,1,0,true);
+	   _ep->dValue = r.value[0];
+	   attr.set_value(&_ep->dValue);
          }
 	 break;
 	 
 	 case Tango::DEV_LONG:
          {
-	   Tango::DevLong *_retLong = new Tango::DevLong;
-	   *_retLong = (Tango::DevLong)(r.value[0]+0.5);
-	   attr.set_value(_retLong,1,0,true);
+	   _ep->lValue = (Tango::DevLong)(r.value[0]+0.5);
+	   attr.set_value(&_ep->lValue);
          }
 	 break;
 	        

@@ -1114,6 +1114,14 @@ vector<short> ExpParser::ReadModbusReg( int address , int length ) {
 
 // -------------------------------------------------------
 
+short ExpParser::ReadModbusReg( int address ) {
+
+  return parent->reg(address);
+
+}
+
+// -------------------------------------------------------
+
 double ExpParser::ReadAttribute(char *attName) {
   
   return parent->read_self_attribute(attName);

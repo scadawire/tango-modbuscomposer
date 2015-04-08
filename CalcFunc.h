@@ -516,16 +516,16 @@ VALUE OPER_NOT(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_REG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = 	obj->ReadModbusReg(info->reginfo.idx, 1);
-  r.value[0] = regs[0];
+  short reg = obj->ReadModbusReg(info->reginfo.idx);
+  r.value[0] = reg;
   r.lgth = 1;
   return r;
 }
 
 VALUE OPER_UREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 1);
-  r.value[0] = (unsigned short) regs[0];
+  short reg = obj->ReadModbusReg(info->reginfo.idx);
+  r.value[0] = (unsigned short) reg;
   r.lgth = 1;
   return r;
 }

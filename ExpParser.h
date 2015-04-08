@@ -190,10 +190,17 @@ public:
 
   
   vector<short> ReadModbusReg( int address , int length ); 
+  short ReadModbusReg( int address );
   double ReadAttribute(char *attName);
 
   // Error function
   void   SetError(char *err,int p=-1);
+
+  // Temporary value
+  Tango::DevDouble  dValue;
+  Tango::DevBoolean bValue;
+  Tango::DevLong    lValue;
+  Tango::DevShort   sValue;
 
 private:
 

@@ -315,7 +315,10 @@ void ExpParser::ReadName( char *name ) {
   do {
 
     stradd(name,EC);
-    AV();
+
+    current++;
+    EC=expr[current];
+
     i++;
     if(i>=MAXLENGHT) SetError((char *)"Variable name too long",p);
 

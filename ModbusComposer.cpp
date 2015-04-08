@@ -646,11 +646,9 @@ void ModbusComposer::write_regs(short address,vector<short> &value) {
 double ModbusComposer::read_self_attribute(char *attName) {
 
   Tango::DeviceAttribute da;
-
-  Tango::AttributeInfoEx attInfo = selfDS->get_attribute_config(attName);
   da = selfDS->read_attribute(attName);
 
-  switch(attInfo.data_type) {
+  switch(da.get_type()) {
 
     case Tango::DEV_BOOLEAN:
     {

@@ -83,14 +83,20 @@ ExpParser::ExpParser(ModbusComposer *parent) {
   strcpy(name,"");
   strcpy(status,"");
   state = Tango::UNKNOWN;
+  devices.clear();
 
 }
 
 // -------------------------------------------------------
 
 ExpParser::~ExpParser() {
+
   safe_free_tree(&evalTree);
   safe_free_tree(&writeTree);
+  for(int i=0;i<(int)devices.size();i++)
+    delete devices[i].ds;
+  devices.clear();
+
 }
 
 // -------------------------------------------------------
@@ -332,6 +338,38 @@ void ExpParser::ReadName( char *name ) {
   while(current<exprLgth && (EC==' ' || EC=='\t')) {
     current++;
     EC=expr[current];
+  }
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ReadAttName( char *name ) {
+
+  int i=0;
+  int p;
+  p=current;
+  
+  /*
+  if( !IsLetter(EC) ) {
+    error = true;
+    SetError((char *)"Name expected",p);
+    return;
+
+  }
+  */
+
+  name[0]=0;
+  while( EC!='\'' ) {
+
+    stradd(name,EC);
+
+    current++;
+    EC=expr[current];
+
+    i++;
+    if(i>=MAXLENGHT) SetError((char *)"Attribute name too long",p);
+
   }
 
 }
@@ -697,6 +735,23 @@ void ExpParser::ReadTerm(ETREE **node)
 		elem.reginfo.idx = idx;
 		elem.reginfo.lgth = lgth;
                 AddNode( OPER_UREGS , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else {
+                ReadName((char *)elem.name);
+                AddNode( OPER_NAME , elem , node , NULL , NULL);
+              }
+              break;
+
+    case 'x':
+    case 'X': if ( Match("xattr(") ) {
+		AV(6);
+		if (EC!='\'') SetError((char *)"' expected",current);
+	        AV();
+                ReadAttName((char *)elem.name);
+                AddNode( OPER_XATTR , elem , node , NULL , NULL);
+                if (EC!='\'') SetError((char *)"' expected",current);
+                AV();
                 if (EC!=')') SetError((char *)") expected",current);
                 AV();
               } else {
@@ -1134,6 +1189,89 @@ short ExpParser::ReadModbusReg( int address ) {
 double ExpParser::ReadAttribute(char *attName) {
   
   return parent->read_self_attribute(attName);
+
+}
+
+// -------------------------------------------------------
+
+Tango::DeviceProxy *ExpParser::Import(string devName) {
+
+  bool found = false;
+  int i = 0;
+
+  while( !found && i<(int)devices.size() ) {
+    found = devName.compare(devices[i].devName)==0;
+    if(!found) i++;
+  }
+
+  if(!found) {
+    DEV_ITEM it;
+    it.ds = new Tango::DeviceProxy(devName);
+    it.devName = devName;
+    devices.push_back(it);
+    return it.ds;    
+  } else {
+    return devices[i].ds;
+  }
+
+}
+
+// -------------------------------------------------------
+
+double ExpParser::ReadExternAttribute(char *fullAttName) {
+
+  char devNameStr[128];
+  strcpy(devNameStr,fullAttName);
+  char *attNameStr = strrchr(devNameStr,'/');
+  if( attNameStr==NULL ) SetError((char *)"Malformed device name");
+  *attNameStr=0;
+  attNameStr++;
+
+  string devName = string(devNameStr);
+  string attName = string(attNameStr);
+
+  Tango::DeviceProxy *ds = Import(devName);
+  Tango::DeviceAttribute da = ds->read_attribute(attName);
+
+  switch(da.get_type()) {
+
+    case Tango::DEV_BOOLEAN:
+    {
+      Tango::DevBoolean v;
+      da >> v;
+      return (double)v;
+    }
+    break;
+    case Tango::DEV_SHORT:
+    {
+      Tango::DevShort v;
+      da >> v;
+      return (double)v;
+    }
+    break;
+    case Tango::DEV_LONG:
+    {
+      Tango::DevLong v;
+      da >> v;
+      return (double)v;
+    }
+    break;
+    case Tango::DEV_DOUBLE:
+    {
+      Tango::DevDouble v;
+      da >> v;
+      return v;
+    }
+    break;   
+    default:
+       Tango::Except::throw_exception(
+         (const char *)"ModbusComposer::error_read",
+         (const char *)"Cannot read attribute (type not supported)",
+         (const char *)"ExpParser::ReadExternAttribute");
+
+  }
+
+  return 0.0;
 
 }
 

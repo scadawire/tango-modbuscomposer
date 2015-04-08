@@ -593,6 +593,13 @@ VALUE OPER_FLAG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   return r;
 }
 
+VALUE OPER_XATTR(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  r.value[0] = obj->ReadExternAttribute(info->name);
+  r.lgth = 1;
+  return r;
+}
+
 VALUE OPER_DOUBLE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   r.value[0] = (info->constant);

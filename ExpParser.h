@@ -50,11 +50,14 @@
 /*               'pow(' <exp>,<exp> ')'  |                                       */
 /*               'sum(' <variable>,<double>,<double> ')' |                       */
 /*                                                                               */
+/*               'xattr('' <full_qualified_att_name> '')' |   (Extern tango att)   */
+/*                                                                               */
 /*                                                      Scalar reading:          */
 /*               'reg(' <integer> ')' |                 Read 16 bit signed       */
 /*               'ureg(' <integer> ')' |                Read 16 bit unsigned     */
 /*               'freg(' <integer> ')' |                Read 2*16bit float       */
 /*               'dreg(' <integer> ')' |                Read 4*16bit double      */
+/*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*                                                                               */
 /*                                                      Vector reading:          */
@@ -156,6 +159,11 @@ typedef struct _ETREE {
   struct _ETREE *right;
 } ETREE;
 
+// Device factory
+typedef struct {
+  Tango::DeviceProxy *ds;
+  string devName;
+} DEV_ITEM;
 
 class ExpParser {
 
@@ -192,6 +200,7 @@ public:
   vector<short> ReadModbusReg( int address , int length ); 
   short ReadModbusReg( int address );
   double ReadAttribute(char *attName);
+  double ReadExternAttribute(char *attName);
 
   // Error function
   void   SetError(char *err,int p=-1);
@@ -213,6 +222,7 @@ private:
   void   ReadFactor4(ETREE **node);
 
   void   ReadName( char *name );
+  void   ReadAttName( char *name );
   void   ReadType();
   void   ReadState();
   void   ReadWriteFn();
@@ -223,6 +233,7 @@ private:
   void   AV(int n);
   bool   Match(string word);
   bool   IsLetter(char c);
+  Tango::DeviceProxy *Import(string devName);
 
   void FloatToRegisters(float f,unsigned short *r1,unsigned short *r2);
   void DoubleToRegisters(double f,unsigned short *r1,unsigned short *r2,unsigned short *r3,unsigned short *r4);
@@ -243,6 +254,7 @@ private:
 
   ETREE *evalTree;
   ETREE *writeTree;
+  vector<DEV_ITEM> devices;
 
 };
 

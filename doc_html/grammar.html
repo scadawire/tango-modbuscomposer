@@ -6,10 +6,13 @@
 CoolingWaterFlow=DevDouble(reg(0x3000)/10.0*1.666)
 CavityWaterFlow=DevDouble(reg(0x3001)/10.0*1.46)
 CavityWaterOutTemp=DevDouble(reg(0x300A)/10.0)
+CavityWaterInTemp=DevDouble(reg(0x3010)/10.0)
 TemperatureItlk1=DevBoolean(not flag(0x3031,9))
 TemperatureItlk2=DevBoolean(not flag(0x3031,10))
 BlowerOnOff=DevShort(reg(0x3029),WriteInt(0x3029,VALUE))
 Temp_Threshold=DevDouble(reg(0x3080)/10.0,WriteInt(0x3080,VALUE/10.0))
+CalcPower=DevDouble((4.18/60.0)*CoolingWaterFlow*(CavityWaterOutTemp-CavityWaterInTemp))
+Circumference=DevDouble(992/xattr('sy/ms/1/frequency')*299792458)
 
 <b>Exemple of state definition:</b>
 

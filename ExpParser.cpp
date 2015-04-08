@@ -328,6 +328,12 @@ void ExpParser::ReadName( char *name ) {
      (EC>='0' && EC<='9') ||
      (EC=='_'));
 
+  // Jump to the next significative char
+  while(current<exprLgth && (EC==' ' || EC=='\t')) {
+    current++;
+    EC=expr[current];
+  }
+
 }
 
 // -------------------------------------------------------

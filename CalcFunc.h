@@ -105,10 +105,7 @@ VALUE OPER_PLUS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_MINUS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  if (a->lgth == 1) {
-    for (int i = 0; i < b->lgth; i++) r.value[i] = b->value[i] - a->value[0];
-    r.lgth = b->lgth;
-  } else if (b->lgth == 1) {
+  if (b->lgth == 1) {
     for (int i = 0; i < a->lgth; i++) r.value[i] = a->value[i] - b->value[0];
     r.lgth = a->lgth;
   } else if (a->lgth == b->lgth) {

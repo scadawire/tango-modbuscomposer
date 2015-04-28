@@ -1,7 +1,7 @@
 <body>
 <pre>
 
-<b>Example of valid dynamic attribute expression:</b>
+<b>Example of dynamic attribute expression:</b>
 
 CoolingWaterFlow=DevDouble(reg(0x3000)/10.0*1.666)
 CavityWaterFlow=DevDouble(reg(0x3001)/10.0*1.46)
@@ -14,12 +14,20 @@ Temp_Threshold=DevDouble(reg(0x3080)/10.0,WriteInt(0x3080,VALUE/10.0))
 CalcPower=DevDouble((4.18/60.0)*CoolingWaterFlow*(CavityWaterOutTemp-CavityWaterInTemp))
 Circumference=DevDouble(992/xattr('sy/ms/1/frequency')*299792458)
 
+<b>Exemple of dynamic command expression:</b>
+
+Reset=WriteInt(0x3029,reg(0x3029)|0x0100)
+On=WriteInt(0x3029,reg(0x3029)|0x0010)
+Off=WriteInt(0x3029,reg(0x3029)&~0x0010)
+
 <b>Exemple of state definition:</b>
 
 FAULT=not Flag(0x3031,7),Depression air flow
 ALARM=CoolingWaterFlow&lt;213,Flow too low
 ALARM=CavityWaterOutTemp&gt;23.4,Temp too high
 ON=Flag(0x3031,13),Blower is ON
+
+First states in the above list have a highest priority.
 
 <b>Grammar</b>
 

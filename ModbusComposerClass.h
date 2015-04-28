@@ -177,6 +177,33 @@ class DynSpecAttribute: public Tango::SpectrumAttr {
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposerClass::classes for dynamic creation
 
+//=========================================
+//	Define classes for dynamic commands
+//=========================================
+//	Command DynCommand class definition
+class DynCommandClass : public Tango::Command
+{
+public:
+	DynCommandClass(const char   *name,
+	               Tango::CmdArgType in,
+				   Tango::CmdArgType out,
+				   const char        *in_desc,
+				   const char        *out_desc,
+				   Tango::DispLevel  level)
+	:Command(name,in,out,in_desc,out_desc, level)	{};
+
+	DynCommandClass(const char   *name,
+	               Tango::CmdArgType in,
+				   Tango::CmdArgType out)
+	:Command(name,in,out)	{};
+	~DynCommandClass() {};
+	
+	virtual CORBA::Any *execute (Tango::DeviceImpl *dev, const CORBA::Any &any);
+	virtual bool is_allowed (Tango::DeviceImpl *dev, const CORBA::Any &any)
+	{return (static_cast<ModbusComposer *>(dev))->is_DynCommand_allowed(any);}
+};
+
+
 /**
  *	The ModbusComposerClass singleton definition
  */

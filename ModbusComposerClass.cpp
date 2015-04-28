@@ -158,6 +158,24 @@ ModbusComposerClass *ModbusComposerClass::instance()
 //===================================================================
 //	Command execution method calls
 //===================================================================
+//--------------------------------------------------------
+/**
+ * method : 		DynCommandClass::execute()
+ * description : 	method to trigger the execution of the command.
+ *
+ * @param	device	The device on which the command must be executed
+ * @param	in_any	The command input data
+ *
+ *	returns The command output data (packed in the Any object)
+ */
+//--------------------------------------------------------
+CORBA::Any *DynCommandClass::execute(Tango::DeviceImpl *device, TANGO_UNUSED(const CORBA::Any &in_any))
+{
+	cout2 << "DynCommandClass::execute(): arrived" << endl;
+	((static_cast<ModbusComposer *>(device))->dyn_command(*this));
+	return new CORBA::Any();
+}
+
 
 //===================================================================
 //	Properties management
@@ -241,7 +259,20 @@ void ModbusComposerClass::set_default_property()
 	else
 		add_wiz_dev_prop(prop_name, prop_desc);
 	prop_name = "DynamicAttributes";
-	prop_desc = "List of dynacmic attributes";
+	prop_desc = "List of dynacmic attributes\nSee <a href=grammar.html>grammar.html</a>";
+	prop_def  = "";
+	vect_data.clear();
+	if (prop_def.length()>0)
+	{
+		Tango::DbDatum	data(prop_name);
+		data << vect_data ;
+		dev_def_prop.push_back(data);
+		add_wiz_dev_prop(prop_name, prop_desc,  prop_def);
+	}
+	else
+		add_wiz_dev_prop(prop_name, prop_desc);
+	prop_name = "DynamicCommands";
+	prop_desc = "List of dynacmic attributes\nSee <a href=grammar.html>grammar.html</a>";
 	prop_def  = "";
 	vect_data.clear();
 	if (prop_def.length()>0)
@@ -254,7 +285,7 @@ void ModbusComposerClass::set_default_property()
 	else
 		add_wiz_dev_prop(prop_name, prop_desc);
 	prop_name = "DynamicStates";
-	prop_desc = "State definitions (Default state is ON)";
+	prop_desc = "State definitions (Default state is ON)\nSee <a href=grammar.html>grammar.html</a>";
 	prop_def  = "";
 	vect_data.clear();
 	if (prop_def.length()>0)
@@ -481,6 +512,7 @@ void ModbusComposerClass::device_factory(const Tango::DevVarStringArray *devlist
 		//	Add dynamic attributes if any
 		ModbusComposer *dev = static_cast<ModbusComposer *>(device_list[device_list.size()-i]);
 		dev->add_dynamic_attributes();
+		dev->add_dynamic_commands();
 
 		//	Check before if database used.
 		if ((Tango::Util::_UseDb == true) && (Tango::Util::_FileDb == false))

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
   <classes name="ModbusComposer" pogoRevision="9.0">
-    <description description="A class to create dynamic attributes above a Modbus interface" title="ModbusComposer" sourcePath="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer" language="Cpp" filestogenerate="XMI   file,Protected Regions,html Pages" license="GPL" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false" descriptionHtmlExists="false">
+    <description description="A class to create dynamic attributes above a Modbus interface" title="ModbusComposer" sourcePath="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer" language="Cpp" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <identification contact="at esrf.fr - pons" author="pons" emailDomain="esrf.fr" classFamily="Calculation" siteSpecific="" platform="All Platforms" bus="Modbus" manufacturer="none" reference=""/>
     </description>
@@ -10,6 +10,10 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
     <deviceProperties name="DynamicAttributes" description="List of dynacmic attributes&#xA;See &lt;a href=grammar.html>grammar.html&lt;/a>">
+      <type xsi:type="pogoDsl:StringVectorType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </deviceProperties>
+    <deviceProperties name="DynamicCommands" description="List of dynacmic attributes&#xA;See &lt;a href=grammar.html>grammar.html&lt;/a>">
       <type xsi:type="pogoDsl:StringVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
@@ -47,6 +51,15 @@
       </argout>
       <status abstract="true" inherited="true" concrete="true"/>
     </commands>
+    <dynamicCommands name="DynCommand" description="" execMethod="dyn_command" displayLevel="OPERATOR" polledPeriod="0" isDynamic="true">
+      <argin description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </dynamicCommands>
     <preferences docHome="./doc_html" makefileHome="/segfs/tango/cppserver/env"/>
     <additionalFiles name="ExpParser" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/ExpParser.cpp"/>
     <additionalFiles name="AttributeMap" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/AttributeMap.cpp"/>

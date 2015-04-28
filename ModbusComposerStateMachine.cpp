@@ -55,4 +55,19 @@ namespace ModbusComposer_ns
 //		Commands Allowed Methods
 //=================================================
 
+//--------------------------------------------------------
+/**
+ *	Method      : ModbusComposer::is_DynCommand_allowed()
+ *	Description : Execution allowed for DynCommand attribute
+ */
+//--------------------------------------------------------
+bool ModbusComposer::is_DynCommand_allowed(TANGO_UNUSED(const CORBA::Any &any))
+{
+	//	Not any excluded states for DynCommand command.
+	/*----- PROTECTED REGION ID(ModbusComposer::DynCommandStateAllowed) ENABLED START -----*/
+	
+	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::DynCommandStateAllowed
+	return true;
+}
+
 }	//	End of namespace

@@ -129,8 +129,10 @@ void ModbusComposer::delete_device()
 	}
 
 	if( Tango::Util::instance()->is_svr_shutting_down() ||
-            Tango::Util::instance()->is_device_restarting(get_name()) )
+            Tango::Util::instance()->is_device_restarting(get_name()) ) {
 	  attMap.clear();
+	  cmdMap.clear();
+	}
 	
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::delete_device
 }
@@ -248,6 +250,7 @@ void ModbusComposer::get_device_property()
 	//	Initialize property data members
 	modbus_name = "";
 	dynamicAttributes.clear();
+	dynamicCommands.clear();
 	dynamicStates.clear();
 	addressOffset = 0;
 	defaultReadCommand = "ReadHoldingRegisters";
@@ -260,6 +263,7 @@ void ModbusComposer::get_device_property()
 	Tango::DbData	dev_prop;
 	dev_prop.push_back(Tango::DbDatum("Modbus_name"));
 	dev_prop.push_back(Tango::DbDatum("DynamicAttributes"));
+	dev_prop.push_back(Tango::DbDatum("DynamicCommands"));
 	dev_prop.push_back(Tango::DbDatum("DynamicStates"));
 	dev_prop.push_back(Tango::DbDatum("AddressOffset"));
 	dev_prop.push_back(Tango::DbDatum("DefaultReadCommand"));
@@ -299,6 +303,17 @@ void ModbusComposer::get_device_property()
 		}
 		//	And try to extract DynamicAttributes value from database
 		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  dynamicAttributes;
+
+		//	Try to initialize DynamicCommands from class property
+		cl_prop = ds_class->get_class_property(dev_prop[++i].name);
+		if (cl_prop.is_empty()==false)	cl_prop  >>  dynamicCommands;
+		else {
+			//	Try to initialize DynamicCommands from default device value
+			def_prop = ds_class->get_default_device_property(dev_prop[i].name);
+			if (def_prop.is_empty()==false)	def_prop  >>  dynamicCommands;
+		}
+		//	And try to extract DynamicCommands value from database
+		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  dynamicCommands;
 
 		//	Try to initialize DynamicStates from class property
 		cl_prop = ds_class->get_class_property(dev_prop[++i].name);
@@ -404,7 +419,7 @@ void ModbusComposer::add_dynamic_attributes()
 	  ep->SetExpression((char *)dynamicAttributes[i].c_str());
 	  
 	  try {	  
-	    ep->Parse();
+	    ep->ParseAttribute();
           } catch( Tango::DevFailed &e ) {	  
 	    cerr << device_name << ":Parse Error in : " << dynamicAttributes[i] << endl;
 	    cerr << e.errors[0].desc << endl;
@@ -503,6 +518,73 @@ Tango::DevState ModbusComposer::dev_state()
 	if (argout!=Tango::ALARM)
 		DeviceImpl::dev_state();
 	return get_state();  // Return it after Tango management.
+}
+//--------------------------------------------------------
+/**
+ *	Command DynCommand related method
+ *	Description: 
+ *
+ */
+//--------------------------------------------------------
+void ModbusComposer::dyn_command(Tango::Command &command)
+{
+	DEBUG_STREAM << "ModbusComposer::" << command.get_name() << "  - " << device_name << endl;
+	/*----- PROTECTED REGION ID(ModbusComposer::dyn_command) ENABLED START -----*/
+	
+	ATTITEM *item = cmdMap.get(command.get_name());
+	if( item==NULL ) {
+	  Tango::Except::throw_exception(	    
+	  (const char *)"ModbusComposer::error_write",
+	  (const char *)"Unknown command",
+	  (const char *)"ModbusComposer::dyn_command");	
+	  }
+
+ 	item->ep->EvaluateWrite(0.0);
+	
+	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::dyn_command
+}
+//--------------------------------------------------------
+/**
+ *	Method      : ModbusComposer::add_dynamic_commands()
+ *	Description : Create the dynamic commands if any
+ *                for specified device.
+ */
+//--------------------------------------------------------
+void ModbusComposer::add_dynamic_commands()
+{
+	//	Example to add dynamic command:
+	//	Copy inside the folowing protected area to instanciate at startup.
+	//	add_DynCommand_dynamic_command("MyDynCommandCommand", true);
+	
+	/*----- PROTECTED REGION ID(ModbusComposer::add_dynamic_commands) ENABLED START -----*/
+	
+	for(int i=0;i<(int)dynamicCommands.size();i++) {
+
+	  // Expression parser
+	  ExpParser *ep = new ExpParser(this);
+	  ep->SetExpression((char *)dynamicCommands[i].c_str());
+	  
+	  try {	  
+	    ep->ParseCommand();
+          } catch( Tango::DevFailed &e ) {	  
+	    cerr << device_name << ":Parse Error in : " << dynamicCommands[i] << endl;
+	    cerr << e.errors[0].desc << endl;
+            Tango::Except::throw_exception(
+              (const char *)"ModbusComposer::error_read",
+              (const char *)"Wrong dynamic command configuration",
+              (const char *)"ModbusComposer::add_dynamic_commands");
+	  }
+	    
+	  // Create command	  	  
+	  DynCommandClass *cmd = new DynCommandClass(ep->GetName(),Tango::DEV_VOID,Tango::DEV_VOID);
+          add_command(cmd);
+	  
+	  cmdMap.add(string(ep->GetName()),ep);
+	
+	}
+
+	
+	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::add_dynamic_commands
 }
 
 /*----- PROTECTED REGION ID(ModbusComposer::namespace_ending) ENABLED START -----*/

@@ -1074,7 +1074,36 @@ void ExpParser::ParseState()
 
 // -------------------------------------------------------
 
-void ExpParser::Parse()
+void ExpParser::ParseCommand()
+{
+
+  exprLgth = strlen(expr);
+  if( exprLgth==0 )
+    SetError((char*)"Empty expression");
+
+  current=0;
+  EC=expr[0];
+
+  safe_free_tree(&evalTree);
+  safe_free_tree(&writeTree);
+  
+  ReadName(name);
+  if(EC!='=') SetError((char *)"= expected",current);AV();
+  ReadWriteFn();
+  if(EC!='(') SetError((char *)"( expected",current);AV();
+  ReadInteger(&writeAddress);
+  if(EC!=',') SetError((char *)", expected",current);AV();
+  ReadExpression(&writeTree);
+  if(EC!=')') SetError((char *)") expected",current);AV();
+  
+  if(current!=exprLgth)
+    SetError((char *)"Syntax error",current);
+
+}
+
+// -------------------------------------------------------
+
+void ExpParser::ParseAttribute()
 {
 
   exprLgth = strlen(expr);

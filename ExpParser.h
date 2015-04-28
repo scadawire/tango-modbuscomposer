@@ -186,7 +186,8 @@ public:
   // Expression management
   void  SetExpression(char *expr);   // Set expression
   char *GetExpression();             // Get the expression
-  void  Parse();                     // Compile expression
+  void  ParseAttribute();            // Compile attribute expression
+  void  ParseCommand();              // Compile command expression
   void  ParseState();                // Compile state expression
   int   GetCurrentPos();             // Current parsing cursor position
   bool  HasWriteExpression();        // Return true if a write expression is specified

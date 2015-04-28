@@ -68,6 +68,7 @@ namespace ModbusComposer_ns
 
 	} STATEITEM;
 
+	class DynCommand;
 	class DynAttribute;
 	class DynSpecAttribute;
 
@@ -82,6 +83,7 @@ class ModbusComposer : public TANGO_BASE_CLASS
 private:
 	Tango::DeviceProxy *selfDS;
 	AttributeMap attMap;
+	AttributeMap cmdMap;
 	vector<STATEITEM> stateMap;
 
 public:
@@ -118,8 +120,13 @@ public:
 	//	Modbus_name:	Name of the Modbus device
 	string	modbus_name;
 	//	DynamicAttributes:	List of dynacmic attributes
+	//  See <a href=grammar.html>grammar.html</a>
 	vector<string>	dynamicAttributes;
+	//	DynamicCommands:	List of dynacmic attributes
+	//  See <a href=grammar.html>grammar.html</a>
+	vector<string>	dynamicCommands;
 	//	DynamicStates:	State definitions (Default state is ON)
+	//  See <a href=grammar.html>grammar.html</a>
 	vector<string>	dynamicStates;
 	//	AddressOffset:	Integer offset added to Addresses in every Modbus command call
 	Tango::DevLong	addressOffset;
@@ -216,6 +223,17 @@ public:
 	 */
 	virtual Tango::DevState dev_state();
 
+//	Dynamic commands methods
+public:
+	/**
+	 *	Command DynCommand related method
+	 *	Description: 
+	 *
+	 */
+	virtual void dyn_command(Tango::Command &command);
+	virtual bool is_DynCommand_allowed(const CORBA::Any &any);
+	void add_DynCommand_dynamic_command(string cmdname, bool device);
+	void remove_DynCommand_dynamic_command(string cmdname);
 
 	//--------------------------------------------------------
 	/**

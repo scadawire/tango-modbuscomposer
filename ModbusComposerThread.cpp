@@ -84,9 +84,10 @@ namespace ModbusComposer_ns
       }
       mutex.unlock();
 
-      time_t t1 = get_ticks();    
+      time_t t1 = get_ticks();
       time_t toSleep = (time_t)(ds->cachePeriod) - (t1-t0);
-      usleep(toSleep*1000);
+      if(toSleep>0)
+        usleep(toSleep*1000);
       
     }
             

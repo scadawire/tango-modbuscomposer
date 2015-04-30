@@ -472,45 +472,55 @@ Tango::DevState ModbusComposer::dev_state()
 	bool found = false;
 	int i=0;
         VALUE r;
+        try
+        {
 
-	// Find the first active state
-	while(!found && i<(int)stateMap.size()) {
+	  // Find the first active state
+	  while(!found && i<(int)stateMap.size()) {
 	  
-          stateMap[i].ep->EvaluateRead(&r);
-          found = stateMap[i].ep->GetBoolResult(r);
-          if(!found) i++;
-
-	}
-
-	if( !found ) {
-
-	  argout = Tango::ON;
-          statusStr = "The device is ON";
-
-        } else {
-
-	  string epStatus;
-	  argout = stateMap[i].ep->GetState();
-          statusStr = "The device is " + string(Tango::DevStateName[argout]) + "\n";
-
-	  // Concat status string of the current state
-	  epStatus = string(stateMap[i].ep->GetStatus());
-          if(epStatus.length()>0) statusStr += epStatus + "\n";
-	  i++;
-
-	  // Concact status of other active state
-          while(i<(int)stateMap.size() && stateMap[i].ep->GetState()==argout) {
-          
             stateMap[i].ep->EvaluateRead(&r);
-	    if( stateMap[i].ep->GetBoolResult(r) ) {
-	      epStatus = string(stateMap[i].ep->GetStatus());
-              if(epStatus.length()>0) statusStr += epStatus + "\n";
-	    }
-	    i++;
+            found = stateMap[i].ep->GetBoolResult(r);
+            if(!found) i++;
 
 	  }
+
+	  if( !found ) {
+
+	    argout = Tango::ON;
+            statusStr = "The device is ON";
+
+          } else {
+
+	    string epStatus;
+	    argout = stateMap[i].ep->GetState();
+            statusStr = "The device is " + string(Tango::DevStateName[argout]) + "\n";
+
+	    // Concat status string of the current state
+	    epStatus = string(stateMap[i].ep->GetStatus());
+            if(epStatus.length()>0) statusStr += epStatus + "\n";
+	    i++;
+
+	    // Concact status of other active state
+            while(i<(int)stateMap.size() && stateMap[i].ep->GetState()==argout) {
+          
+              stateMap[i].ep->EvaluateRead(&r);
+	      if( stateMap[i].ep->GetBoolResult(r) ) {
+	        epStatus = string(stateMap[i].ep->GetStatus());
+                if(epStatus.length()>0) statusStr += epStatus + "\n";
+	      }
+	      i++;
+
+	    }
 	  
+          }
+
+        } catch(Tango::DevFailed &e) {
+
+	  argout = Tango::UNKNOWN;
+	  statusStr = string(e.errors[0].desc);
+
         }
+
 	set_status(statusStr);
 
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::dev_state

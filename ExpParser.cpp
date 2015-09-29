@@ -1023,8 +1023,12 @@ void ExpParser::ReadWriteFn() {
     regWriteType = REG_UINT; 	  	
   } else if ( strcasecmp(fName,"WriteLong")==0 ) {
     regWriteType = REG_LONG; 	  	
+  } else if ( strcasecmp(fName,"WriteLongLSB")==0 ) {
+    regWriteType = REG_LONGLSB; 	  	
   } else if ( strcasecmp(fName,"WriteULong")==0 ) {
     regWriteType = REG_ULONG; 	  	
+  } else if ( strcasecmp(fName,"WriteULongLSB")==0 ) {
+    regWriteType = REG_ULONGLSB; 	  	
   } else if ( strcasecmp(fName,"WriteFloat")==0 ) {
     regWriteType = REG_FLOAT; 	  	
   } else if ( strcasecmp(fName,"WriteDouble")==0 ) {
@@ -1358,12 +1362,31 @@ void ExpParser::EvaluateWrite(double wValue) {
       parent->write_regs(writeAddress,input);
       break;
 
+    case REG_LONGLSB:
+      v = (int)(result.value[0]+0.5);
+      uv = (unsigned int)v;
+      r1 = (unsigned short)( uv >> 16 );
+      r2 = (unsigned short)( uv & 0xFFFF );
+      input.push_back(r2);
+      input.push_back(r1);
+      parent->write_regs(writeAddress,input);
+      break;
+
     case REG_ULONG:
       uv = (unsigned int)(result.value[0]+0.5);
       r1 = (unsigned short)( uv >> 16 );
       r2 = (unsigned short)( uv & 0xFFFF );
       input.push_back(r1);
       input.push_back(r2);
+      parent->write_regs(writeAddress,input);
+      break;
+
+    case REG_ULONGLSB:
+      uv = (unsigned int)(result.value[0]+0.5);
+      r1 = (unsigned short)( uv >> 16 );
+      r2 = (unsigned short)( uv & 0xFFFF );
+      input.push_back(r2);
+      input.push_back(r1);
       parent->write_regs(writeAddress,input);
       break;
 

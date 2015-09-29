@@ -77,6 +77,8 @@
 /*                'WriteUInt' |      Write 16 bit registers (unsigned)           */
 /*                'WriteLong' |      Write 2*16 bit registers (signed)           */
 /*                'WriteULong' |     Write 2*16 bit registers (unsigned)         */
+/*                'WriteLongLSB' |   Write 2*16 bit registers (signed LSB first) */
+/*                'WriteULongLSB' |  Write 2*16 bit registers (unsigned LSB first)*/
 /*                'WriteFloat' |     Write float value in 2 consecutive regs     */
 /*                'WriteDouble' |    Write double value in 4 consecutive regs    */
 /*                'WriteCoil'        Write single coil                           */
@@ -110,13 +112,15 @@ namespace ModbusComposer_ns
 {
 
 // Write function type
-#define REG_INT     1     
-#define REG_UINT    2     
-#define REG_LONG    3     
-#define REG_ULONG   4     
-#define REG_FLOAT   5     
-#define REG_DOUBLE  6
-#define REG_COIL    7
+#define REG_INT      1     
+#define REG_UINT     2     
+#define REG_LONG     3     
+#define REG_ULONG    4     
+#define REG_FLOAT    5     
+#define REG_DOUBLE   6
+#define REG_COIL     7
+#define REG_LONGLSB  8     
+#define REG_ULONGLSB 9     
 
 #define MAXLENGHT       64  // Maximun name length
 #define MAXVALUELENGTH  64  // Maximum vector length

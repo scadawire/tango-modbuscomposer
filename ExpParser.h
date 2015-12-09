@@ -59,12 +59,14 @@
 /*               'dreg(' <integer> ')' |                Read 4*16bit double      */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
+/*               'coil(' <integer> ')' |                Read coil                */
 /*                                                                               */
 /*                                                      Vector reading:          */
 /*               'regs(' <integer>,<integer> ')' |      Read n*16 bit signed     */
 /*               'uregs(' <integer>,<integer> ')' |     Read n*16 bit unsigned   */
 /*               'fregs(' <integer>,<integer> ')' |     Read n*2*16bit float     */
 /*               'dregs(' <integer>,<integer> ')' |     Read n*4*16bit double    */
+/*               'coils(' <integer>,<integer> ')'|      Read multiple coil       */
 /*               'PI'                                                            */
 /*                                                                               */
 /* <oper1>    ::= '&' | '|' | '^'                          lowest precedence     */
@@ -204,6 +206,8 @@ public:
   
   vector<short> ReadModbusReg( int address , int length ); 
   short ReadModbusReg( int address );
+  vector<short> ReadModbusCoil( int address , int length ); 
+  short ReadModbusCoil( int address );
   double ReadAttribute(char *attName);
   double ReadExternAttribute(char *attName);
 

@@ -538,6 +538,23 @@ void ExpParser::ReadTerm(ETREE **node)
                 AddNode( OPER_COSH , elem , node , l_t , NULL);
                 if (EC!=')') SetError((char *)") expected",current);
                 AV();
+              } else if ( Match("coil(") ) {
+                AV(5);
+                ReadExpression(&l_t);
+                AddNode( OPER_COIL , elem , node , l_t , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
+              } else if ( Match("coils(") ) {
+                int idx,lgth;
+                AV(6);
+                ReadInteger(&idx);
+		if (EC!=',') SetError((char *)", expected",current);AV();
+                ReadInteger(&lgth);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = lgth;
+                AddNode( OPER_COILS , elem , node , NULL , NULL);
+                if (EC!=')') SetError((char *)") expected",current);
+                AV();
               } else {
                 ReadName((char *)elem.name);
                 AddNode( OPER_NAME , elem , node , NULL , NULL);
@@ -1214,6 +1231,22 @@ vector<short> ExpParser::ReadModbusReg( int address , int length ) {
 short ExpParser::ReadModbusReg( int address ) {
 
   return parent->reg(address);
+
+}
+
+// -------------------------------------------------------
+
+vector<short> ExpParser::ReadModbusCoil( int address , int length ) {
+
+  return parent->coils(address,length);
+
+}
+
+// -------------------------------------------------------
+
+short ExpParser::ReadModbusCoil( int address ) {
+
+  return parent->coil(address);
 
 }
 

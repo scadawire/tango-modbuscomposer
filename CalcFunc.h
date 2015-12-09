@@ -519,6 +519,14 @@ VALUE OPER_REG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   return r;
 }
 
+VALUE OPER_COIL(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  short coil = obj->ReadModbusCoil(info->reginfo.idx);
+  r.value[0] = coil;
+  r.lgth = 1;
+  return r;
+}
+
 VALUE OPER_UREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   short reg = obj->ReadModbusReg(info->reginfo.idx);
@@ -548,6 +556,15 @@ VALUE OPER_REGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   int l = info->reginfo.lgth;
   vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l);
   for (int i = 0; i < l; i++) r.value[i] = regs[i];
+  r.lgth = l;
+  return r;
+}
+
+VALUE OPER_COILS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  int l = info->reginfo.lgth;
+  vector<short> coils = obj->ReadModbusCoil(info->reginfo.idx, l);
+  for (int i = 0; i < l; i++) r.value[i] = coils[i];
   r.lgth = l;
   return r;
 }

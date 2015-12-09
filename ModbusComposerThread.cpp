@@ -47,22 +47,35 @@ namespace ModbusComposer_ns
   void *ModbusComposerThread::run_undetached(void *arg)
   {
       
-    while(ds->useCache) {
+    while(ds->useCache || ds->useCoilCache) {
           
       time_t t0 = get_ticks();
 
       Tango::DeviceData argout;
       Tango::DeviceData argin;
       vector<short> input;
-      vector<short> output;
+      vector<short> outputReg;
+      vector<short> outputCoil;
 
       try {
-      
-        input.push_back(ds->cacheStartAddress);
-        input.push_back(ds->cacheLength);
-        argin << input;
-        argout = ds->modbusDS->command_inout(ds->defaultReadCommand.c_str(),argin);
-        argout >> output;
+
+
+	if( ds->useCache ) {
+          input.push_back(ds->cacheStartAddress);
+          input.push_back(ds->cacheLength);
+          argin << input;
+          argout = ds->modbusDS->command_inout(ds->defaultReadCommand.c_str(),argin);
+          argout >> outputReg;
+        }
+
+	if( ds->useCoilCache ) {
+          input.push_back(ds->cacheCoilStartAddress);
+          input.push_back(ds->cacheCoilLength);
+          argin << input;
+          argout = ds->modbusDS->command_inout("ReadMultipleCoilsStatus",argin);
+          argout >> outputCoil;
+        }
+
 	readOK = true;
 
       } catch( Tango::DevFailed &e ) {
@@ -76,11 +89,13 @@ namespace ModbusComposer_ns
       mutex.lock();
       ds->cacheOK =  readOK;
       if( readOK ) {
-        ds->cacheBuffer = output;
+        ds->cacheBuffer = outputReg;
+        ds->cacheCoilBuffer = outputCoil;
 	ds->cacheError = "";
       } else {
 	ds->cacheError = readError;
 	ds->cacheBuffer.clear();
+	ds->cacheCoilBuffer.clear();
       }
       mutex.unlock();
 

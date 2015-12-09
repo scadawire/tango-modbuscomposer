@@ -123,8 +123,9 @@ void ModbusComposer::delete_device()
 	for(int i=0;i<(int)stateMap.size();i++)
           delete stateMap[i].ep;          
         stateMap.clear();
-	if( useCache ) {
+	if( useCache || useCoilCache ) {
 	  useCache=false;
+	  useCoilCache=false;
 	  cacheThread->join(NULL);
 	}
 
@@ -154,6 +155,7 @@ void ModbusComposer::init_device()
 	set_status("Device is ON");
         stateMap.clear();
 	useCache = false;
+	useCoilCache = false;
 	cacheThread = NULL;
 
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::init_device_before
@@ -219,17 +221,30 @@ void ModbusComposer::init_device()
 
 	// Cache config ----------------------------------------------------------
 	
-	if( cacheConfig.size()>0 ) {
+	if( cacheConfig.size()>0 || coilCacheConfig.size()>0 ) {
 
-	  if( cacheConfig.size()!=3 ) {
-	    cerr << device_name << ":Invalid cache config" << endl;
-            exit(0);
+          cacheOK = false;
+	  cacheError = "Cache not initialized";
+
+	  if( cacheConfig.size()==3 ) {
+  	    useCache = true;
+	    cacheStartAddress = cacheConfig[0];
+	    cacheLength = cacheConfig[1];
+	    cachePeriod = cacheConfig[2];
 	  }
 
-	  cacheStartAddress = cacheConfig[0];
-	  cacheLength = cacheConfig[1];
-	  cachePeriod = cacheConfig[2];
-	  useCache = true;
+	  if( coilCacheConfig.size()==3 ) {
+	    useCoilCache = true;
+	    cacheCoilStartAddress = cacheConfig[0];
+	    cacheCoilLength = cacheConfig[1];
+	    cachePeriod = cacheConfig[2];
+	  }
+
+	  if( !useCache && !useCoilCache ) {
+	    cerr << device_name << ": Invalid cache configuration, check  CacheConfig or CoilCacheConfig propery" << endl;
+            exit(0);
+          }
+
 	  cacheThread = new ModbusComposerThread(this,cacheMutex);
 
         }
@@ -255,6 +270,7 @@ void ModbusComposer::get_device_property()
 	addressOffset = 0;
 	defaultReadCommand = "ReadHoldingRegisters";
         cacheConfig.clear();
+        coilCacheConfig.clear();
 
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::get_device_property_before
 
@@ -268,6 +284,7 @@ void ModbusComposer::get_device_property()
 	dev_prop.push_back(Tango::DbDatum("AddressOffset"));
 	dev_prop.push_back(Tango::DbDatum("DefaultReadCommand"));
 	dev_prop.push_back(Tango::DbDatum("CacheConfig"));
+	dev_prop.push_back(Tango::DbDatum("CoilCacheConfig"));
 
 	//	is there at least one property to be read ?
 	if (dev_prop.size()>0)
@@ -358,6 +375,17 @@ void ModbusComposer::get_device_property()
 		}
 		//	And try to extract CacheConfig value from database
 		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  cacheConfig;
+
+		//	Try to initialize CoilCacheConfig from class property
+		cl_prop = ds_class->get_class_property(dev_prop[++i].name);
+		if (cl_prop.is_empty()==false)	cl_prop  >>  coilCacheConfig;
+		else {
+			//	Try to initialize CoilCacheConfig from default device value
+			def_prop = ds_class->get_default_device_property(dev_prop[i].name);
+			if (def_prop.is_empty()==false)	def_prop  >>  coilCacheConfig;
+		}
+		//	And try to extract CoilCacheConfig value from database
+		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  coilCacheConfig;
 
 	}
 
@@ -601,6 +629,101 @@ void ModbusComposer::add_dynamic_commands()
 
 //	Additional Methods
 
+short ModbusComposer::coil(short address) {
+  
+  short ret;
+
+  if( useCoilCache ) {
+
+    omni_mutex_lock sync(cacheMutex);
+
+    int idx = address-cacheCoilStartAddress;
+      
+    if( !cacheOK ) {
+       Tango::Except::throw_exception(
+         (const char *)"ModbusComposer::error_cache_read",
+         (const char *)cacheError.c_str(),
+         (const char *)"ModbusComposer::coil");
+    }
+
+    if(idx<0 || idx>=(int)cacheCoilBuffer.size()) {
+       Tango::Except::throw_exception(
+         (const char *)"ModbusComposer::error_cahce_read",
+         (const char *)"Coil reading out of cache range",
+         (const char *)"ModbusComposer::coil");
+    }
+
+    ret = cacheCoilBuffer[idx];
+
+  } else {
+  
+    Tango::DeviceData argout;
+    Tango::DeviceData argin;
+    vector<short> input;
+    vector<short> output;
+          
+    input.push_back(address);
+    input.push_back(1);
+    argin << input;
+    argout = modbusDS->command_inout("ReadMultipleCoilsStatus",argin);
+    argout >> output;
+
+    ret = output[0];
+
+  }
+
+  return ret;
+
+}
+
+vector<short> ModbusComposer::coils(short address,int length) {
+  
+  vector<short> ret;
+
+  if( useCoilCache ) {
+
+    omni_mutex_lock sync(cacheMutex);
+
+    int idx = address-cacheCoilStartAddress;
+      
+    if( !cacheOK ) {
+       Tango::Except::throw_exception(
+         (const char *)"ModbusComposer::error_cache_read",
+         (const char *)cacheError.c_str(),
+         (const char *)"ModbusComposer::coils");
+    }
+
+    if(idx<0 || idx+length>(int)cacheCoilBuffer.size()) {
+       Tango::Except::throw_exception(
+         (const char *)"ModbusComposer::error_cahce_read",
+         (const char *)"Register reading out of cache range",
+         (const char *)"ModbusComposer::coils");
+    }
+
+    for(int i=0;i<length;i++)
+      ret.push_back(cacheCoilBuffer[idx+i]);
+
+  } else {
+  
+    Tango::DeviceData argout;
+    Tango::DeviceData argin;
+    vector<short> input;
+    vector<short> output;
+          
+    input.push_back(address);
+    input.push_back(length);
+    argin << input;
+    argout = modbusDS->command_inout("ReadMultipleCoilsStatus",argin);
+    argout >> output;
+
+    ret = output;
+
+  }
+
+  return ret;
+
+}
+
 short ModbusComposer::reg(short address) {
   
   short ret;
@@ -662,14 +785,14 @@ vector<short> ModbusComposer::regs(short address,int length) {
        Tango::Except::throw_exception(
          (const char *)"ModbusComposer::error_cache_read",
          (const char *)cacheError.c_str(),
-         (const char *)"ModbusComposer::reg");
+         (const char *)"ModbusComposer::regs");
     }
 
     if(idx<0 || idx+length>(int)cacheBuffer.size()) {
        Tango::Except::throw_exception(
          (const char *)"ModbusComposer::error_cahce_read",
          (const char *)"Register reading out of cache range",
-         (const char *)"ModbusComposer::reg");
+         (const char *)"ModbusComposer::regs");
     }
 
     for(int i=0;i<length;i++)

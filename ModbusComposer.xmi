@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
-  <classes name="ModbusComposer" pogoRevision="9.0">
+  <classes name="ModbusComposer" pogoRevision="9.1">
     <description description="A class to create dynamic attributes above a Modbus interface" title="ModbusComposer" sourcePath="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer" language="Cpp" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <identification contact="at esrf.fr - pons" author="pons" emailDomain="esrf.fr" classFamily="Calculation" siteSpecific="" platform="All Platforms" bus="Modbus" manufacturer="none" reference=""/>
@@ -30,6 +30,10 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>
     <deviceProperties name="CacheConfig" description="Cache configuration, the read command is the DefaultReadCommand (if any)&#xA;&#xA;[0] = Start address&#xA;[1] = Number of register&#xA;[2] = Refresh period (ms)">
+      <type xsi:type="pogoDsl:IntVectorType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </deviceProperties>
+    <deviceProperties name="CoilCacheConfig" description="Coil Cache configuration, the read can be only ReadMultipleCoilStatus&#xA;&#xA;[0] = Start address&#xA;[1] = Number of coil&#xA;[2] = Refresh period (ms)">
       <type xsi:type="pogoDsl:IntVectorType"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </deviceProperties>

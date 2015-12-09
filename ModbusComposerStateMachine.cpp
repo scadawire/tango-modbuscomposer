@@ -70,4 +70,11 @@ bool ModbusComposer::is_DynCommand_allowed(TANGO_UNUSED(const CORBA::Any &any))
 	return true;
 }
 
+
+/*----- PROTECTED REGION ID(ModbusComposer::ModbusComposerStateAllowed.AdditionalMethods) ENABLED START -----*/
+
+//	Additional Methods
+
+/*----- PROTECTED REGION END -----*/	//	ModbusComposer::ModbusComposerStateAllowed.AdditionalMethods
+
 }	//	End of namespace

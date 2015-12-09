@@ -69,6 +69,7 @@ First states in the above list have a highest priority.
                'ureg(' &lt;integer&gt; ')' |                //Read 16 bit unsigned     
                'freg(' &lt;integer&gt; ')' |                //Read 2*16bit float       
                'dreg(' &lt;integer&gt; ')' |                //Read 4*16bit double      
+               'coil(' &lt;integer&gt; ')' |                //Read single coil 
                'flag(' &lt;integer&gt;,&lt;integer&gt; ')' |      //Read bit n of reg (return 1 or 0)
                                                                                
                                                       //Vector reading:          
@@ -76,6 +77,7 @@ First states in the above list have a highest priority.
                'uregs(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*16 bit unsigned   
                'fregs(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*2*16bit float     
                'dregs(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*4*16bit double    
+               'coils(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*coils   
                'PI'
                                                                                
  &lt;oper1&gt;    ::= '&' | '|' | '^'                       //lowest precedence     

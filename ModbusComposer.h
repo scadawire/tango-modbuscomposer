@@ -89,6 +89,8 @@ private:
 public:
 	short reg(short address);
 	vector<short> regs(short address,int length);
+	short coil(short address);
+	vector<short> coils(short address,int length);
 	void write_coil(short address,short value);
 	void write_reg(short address,short value);
 	void write_regs(short address,vector<short> &value);
@@ -109,9 +111,13 @@ public:
 	Tango::DevLong         cacheStartAddress;
 	Tango::DevLong         cacheLength;
 	vector<short>          cacheBuffer;
+	Tango::DevLong         cacheCoilStartAddress;
+	Tango::DevLong         cacheCoilLength;
+	vector<short>          cacheCoilBuffer;
 	bool                   cacheOK;
         string                 cacheError;	
 	bool                   useCache;
+	bool                   useCoilCache;
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer::Data Members
 
@@ -139,6 +145,12 @@ public:
 	//  [1] = Number of register
 	//  [2] = Refresh period (ms)
 	vector<Tango::DevLong>	cacheConfig;
+	//	CoilCacheConfig:	Coil Cache configuration, the read can be only ReadMultipleCoilStatus
+	//  
+	//  [0] = Start address
+	//  [1] = Number of coil
+	//  [2] = Refresh period (ms)
+	vector<Tango::DevLong>	coilCacheConfig;
 
 
 //	Constructors and destructors

@@ -146,7 +146,6 @@ ADDITIONAL_OBJS = \
 		$(OBJDIR)/CacheThread.o \
                 $(OBJDIR)/ModbusClass.o \
                 $(OBJDIR)/ModbusCore.o \
-                $(OBJDIR)/ModbusCoreSL.o \
                 $(OBJDIR)/Modbus.o \
                 $(OBJDIR)/ModbusStateMachine.o \
                 $(OBJDIR)/SerialClass.o \
@@ -176,8 +175,6 @@ $(OBJDIR)/ModbusClass.o: $(MODBUS_DIR)/ModbusClass.cpp
 	$(CC) $(CXXFLAGS) -DNOSERIAL -c $< -o $(OBJDIR)/ModbusClass.o
 $(OBJDIR)/ModbusCore.o: $(MODBUS_DIR)/ModbusCore.cpp
 	$(CC) $(CXXFLAGS) -DNOSERIAL -c $< -o $(OBJDIR)/ModbusCore.o
-$(OBJDIR)/ModbusCoreSL.o: $(MODBUS_DIR)/ModbusCoreSL.cpp
-	$(CC) $(CXXFLAGS) -DNOSERIAL -c $< -o $(OBJDIR)/ModbusCoreSL.o
 $(OBJDIR)/Modbus.o: $(MODBUS_DIR)/Modbus.cpp
 	$(CC) $(CXXFLAGS) -DNOSERIAL -c $< -o $(OBJDIR)/Modbus.o
 $(OBJDIR)/ModbusStateMachine.o: $(MODBUS_DIR)/ModbusStateMachine.cpp

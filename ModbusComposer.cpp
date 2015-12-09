@@ -235,9 +235,9 @@ void ModbusComposer::init_device()
 
 	  if( coilCacheConfig.size()==3 ) {
 	    useCoilCache = true;
-	    cacheCoilStartAddress = cacheConfig[0];
-	    cacheCoilLength = cacheConfig[1];
-	    cachePeriod = cacheConfig[2];
+	    cacheCoilStartAddress = coilCacheConfig[0];
+	    cacheCoilLength = coilCacheConfig[1];
+	    cachePeriod = coilCacheConfig[2];
 	  }
 
 	  if( !useCache && !useCoilCache ) {

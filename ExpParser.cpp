@@ -539,9 +539,12 @@ void ExpParser::ReadTerm(ETREE **node)
                 if (EC!=')') SetError((char *)") expected",current);
                 AV();
               } else if ( Match("coil(") ) {
+                int idx;
                 AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_COIL , elem , node , l_t , NULL);
+                ReadInteger(&idx);
+		elem.reginfo.idx = idx;
+		elem.reginfo.lgth = 1;
+                AddNode( OPER_COIL , elem , node , NULL , NULL);
                 if (EC!=')') SetError((char *)") expected",current);
                 AV();
               } else if ( Match("coils(") ) {

@@ -92,6 +92,7 @@ public:
 	short coil(short address);
 	vector<short> coils(short address,int length);
 	void write_coil(short address,short value);
+	void write_bit(short address,short bitIdx,short value);
 	void write_reg(short address,short value);
 	void write_regs(short address,vector<short> &value);
 	double read_self_attribute(char *attName);

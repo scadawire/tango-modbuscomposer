@@ -77,6 +77,7 @@
 /*                                                                               */
 /* <writefn>  ::= 'WriteInt' |       Write 16 bit registers (signed)             */
 /*                'WriteUInt' |      Write 16 bit registers (unsigned)           */
+/*                'WriteBit' |       Write bit of a 16 bit register (Thread Sf)  */
 /*                'WriteLong' |      Write 2*16 bit registers (signed)           */
 /*                'WriteULong' |     Write 2*16 bit registers (unsigned)         */
 /*                'WriteLongLSB' |   Write 2*16 bit registers (signed LSB first) */
@@ -86,7 +87,7 @@
 /*                'WriteCoil'        Write single coil                           */
 /*                                                                               */
 /* <type>     :: 'DevBoolean'| 'DevShort' | 'DevDouble' | 'DevLong' |            */
-/*               'DevVarDoubleArray'                                             */
+/*               'DevVarDoubleArray' |'DevUShort' | 'DevULong'                   */
 /*                                                                               */
 /* <double>   ::= <nb>* '.' <nb> <nb>* ['E' [-] <nb> <nb>*] | <integer>          */
 /* <integer>  ::= ['0x']<nb>*                                                    */
@@ -108,10 +109,15 @@
 #ifndef _EXPPARSERH_
 #define _EXPPARSERH_
 
+#ifndef TEST
 #include <ModbusComposer.h>
 
 namespace ModbusComposer_ns
 {
+#else
+#include <tango.h>
+using namespace std;
+#endif
 
 // Write function type
 #define REG_INT      1     
@@ -123,6 +129,7 @@ namespace ModbusComposer_ns
 #define REG_COIL     7
 #define REG_LONGLSB  8     
 #define REG_ULONGLSB 9     
+#define REG_BIT      10
 
 #define MAXLENGHT       64  // Maximun name length
 #define MAXVALUELENGTH  64  // Maximum vector length
@@ -178,7 +185,10 @@ public:
   // Construct an expression parser
   // modbusDS: Handle to the modbus device
   // selfDS: Handle to device proxy on self (for attribute reading)
+  ExpParser();
+#ifndef TEST
   ExpParser(ModbusComposer *parent);
+#endif
   ~ExpParser();
 
   // Formula name and type
@@ -202,7 +212,7 @@ public:
   void   EvaluateRead(VALUE *result);  // Evaluate the read expression
   void   EvaluateWrite(double wValue); // Evaluate the write expression and write register(s)
   double GetWriteValue();              // Return current write value
-
+  Tango::DevULong GetIntegerValue(double value);
   
   vector<short> ReadModbusReg( int address , int length ); 
   short ReadModbusReg( int address );
@@ -219,6 +229,8 @@ public:
   Tango::DevBoolean bValue;
   Tango::DevLong    lValue;
   Tango::DevShort   sValue;
+  Tango::DevULong   ulValue;
+  Tango::DevUShort  usValue;
 
 private:
 
@@ -247,7 +259,9 @@ private:
   void FloatToRegisters(float f,unsigned short *r1,unsigned short *r2);
   void DoubleToRegisters(double f,unsigned short *r1,unsigned short *r2,unsigned short *r3,unsigned short *r4);
 
+#ifndef TEST
   ModbusComposer *parent; // Parent
+#endif
   char name[MAXLENGHT];   // Attribute or State Name
   long type;              // Attribute data type
   char status[512];       // status string
@@ -258,6 +272,7 @@ private:
   char EC;                // Current char
   int  current;           // Current char index
   int  writeAddress;      // Write address
+  int  writeBitIndex;     // Write Bit index
   int  exprLgth;          // Expression length
   double writeVALUE;      // Value used if write expression
 
@@ -267,6 +282,8 @@ private:
 
 };
 
+#ifndef TEST
 } // namespace ModbusComposer_ns
+#endif
 
 #endif /* _EXPPARSERH_ */

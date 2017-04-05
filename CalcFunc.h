@@ -27,8 +27,10 @@
 
 /* Calculation functions */
 
-#define UI(x) ((unsigned int)(x+0.5))
-#define US(x) ((unsigned short)(x+0.5))
+#define UI(x) ((unsigned int)(floor(x)))
+#define US(x) ((unsigned short)(floor(x)))
+#define S(x) ((short)(floor(x)))
+#define I(x) ((int)(floor(x)))
 
 //== Utils Function ===========================================================
 
@@ -530,7 +532,7 @@ VALUE OPER_COIL(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_UREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   short reg = obj->ReadModbusReg(info->reginfo.idx);
-  r.value[0] = (unsigned short) reg;
+  r.value[0] = (unsigned short)(reg);
   r.lgth = 1;
   return r;
 }

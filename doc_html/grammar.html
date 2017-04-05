@@ -19,6 +19,7 @@ Circumference=DevDouble(992/xattr('sy/ms/1/frequency')*299792458)
 Reset=WriteInt(0x3029,reg(0x3029)|0x0100)
 On=WriteInt(0x3029,reg(0x3029)|0x0010)
 Off=WriteInt(0x3029,reg(0x3029)&~0x0010)
+Reset=WriteBit(0x3029,12,1)
 
 <b>Exemple of state definition:</b>
 
@@ -89,6 +90,7 @@ First states in the above list have a highest priority.
  &lt;writefn&gt;  ::= 'WriteInt' |       //Write 16 bit registers (signed)
                 'WriteUInt' |      //Write 16 bit registers (unsigned)
                 'WriteLong' |      //Write 2*16 bit registers (signed)
+		'WriteBit' |       // Write bit of a 16 bit register (Thread Safe)
                 'WriteULong' |     //Write 2*16 bit registers (unsigned)
                 'WriteLongLSB' |   //Write 2*16 bit registers (signed lsb first)
                 'WriteULongLSB' |  //Write 2*16 bit registers (unsigned lsb first)
@@ -97,7 +99,7 @@ First states in the above list have a highest priority.
                 'WriteCoil'        //Write single coil
                                                                                
  &lt;type&gt;     ::= 'DevBoolean' | 'DevShort' | 'DevDouble' | 'DevLong' |            
-                'DevVarDoubleArray'                                             
+                'DevVarDoubleArray' | 'DevUShort' | 'DevULong'                                                
                                                                                
  &lt;double&gt;   ::= &lt;nb&gt;* '.' &lt;nb&gt; &lt;nb&gt;* ['E' [-] &lt;nb&gt; &lt;nb&gt;*] | &lt;integer&gt;          
  &lt;integer&gt;  ::= ['0x']&lt;nb&gt;*                                                    

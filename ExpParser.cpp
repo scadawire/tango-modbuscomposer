@@ -502,8 +502,8 @@ void ExpParser::ReadTerm(ETREE **node)
                   if (EC!=')') SetError((char *)") expected",current);AV();
 
                   // Add all variables
-                  i1 = (int)(d1+0.5);
-                  i2 = (int)(d2+0.5);
+                  i1 = I(d1);
+                  i2 = I(d2);
 
                   // 1st
                   sprintf(elem.name,"%s%d",tmpVName,i1);
@@ -982,12 +982,18 @@ void ExpParser::ReadType() {
   } else if ( strcasecmp(tName,"DevShort")==0 ) {
     isSpectrum = false;
     type = Tango::DEV_SHORT;
+  } else if ( strcasecmp(tName,"DevUShort")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_USHORT;
   } else if ( strcasecmp(tName,"DevDouble")==0 ) {
     isSpectrum = false;
     type = Tango::DEV_DOUBLE;
   } else if ( strcasecmp(tName,"DevLong")==0 ) {
     isSpectrum = false;
     type = Tango::DEV_LONG;
+  } else if ( strcasecmp(tName,"DevULong")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_ULONG;
   } else if ( strcasecmp(tName,"DevVarDoubleArray")==0 ) {
     isSpectrum = true;
     type = Tango::DEV_DOUBLE;
@@ -1055,6 +1061,8 @@ void ExpParser::ReadWriteFn() {
     regWriteType = REG_DOUBLE; 	  	
   } else if ( strcasecmp(fName,"WriteCoil")==0 ) {
     regWriteType = REG_COIL; 	  	
+  } else if ( strcasecmp(fName,"WriteBit")==0 ) {
+    regWriteType = REG_BIT; 	  	
   } else {
     char tmpErr[128];
     sprintf(tmpErr,"Write function %s not suported",fName);
@@ -1117,6 +1125,10 @@ void ExpParser::ParseCommand()
   if(EC!='(') SetError((char *)"( expected",current);AV();
   ReadInteger(&writeAddress);
   if(EC!=',') SetError((char *)", expected",current);AV();
+  if( regWriteType==REG_BIT ) {
+    ReadInteger(&writeBitIndex);
+    if(EC!=',') SetError((char *)", expected",current);AV();
+  }
   ReadExpression(&writeTree);
   if(EC!=')') SetError((char *)") expected",current);AV();
   
@@ -1287,6 +1299,15 @@ Tango::DeviceProxy *ExpParser::Import(string devName) {
 
 // -------------------------------------------------------
 
+Tango::DevULong ExpParser::GetIntegerValue(double value) {
+
+  Tango::DevULong v = UI(value);
+  return v;
+
+}
+
+// -------------------------------------------------------
+
 double ExpParser::ReadExternAttribute(char *fullAttName) {
 
   char devNameStr[128];
@@ -1318,9 +1339,23 @@ double ExpParser::ReadExternAttribute(char *fullAttName) {
       return (double)v;
     }
     break;
+    case Tango::DEV_USHORT:
+    {
+      Tango::DevUShort v;
+      da >> v;
+      return (double)v;
+    }
+    break;
     case Tango::DEV_LONG:
     {
       Tango::DevLong v;
+      da >> v;
+      return (double)v;
+    }
+    break;
+    case Tango::DEV_ULONG:
+    {
+      Tango::DevULong v;
       da >> v;
       return (double)v;
     }
@@ -1330,6 +1365,13 @@ double ExpParser::ReadExternAttribute(char *fullAttName) {
       Tango::DevDouble v;
       da >> v;
       return v;
+    }
+    break;   
+    case Tango::DEV_FLOAT:
+    {
+      Tango::DevFloat v;
+      da >> v;
+      return (double)v;
     }
     break;   
     default:
@@ -1380,16 +1422,17 @@ void ExpParser::EvaluateWrite(double wValue) {
   switch(regWriteType) {
 
     case REG_INT:
-      parent->write_reg(writeAddress,(short)(result.value[0]+0.5));
+      parent->write_reg(writeAddress,S(result.value[0]));
       break;
 
     case REG_UINT:
-      r1 = US(result.value[0]);
+      uv = UI(result.value[0]);
+      r1 = (unsigned short)uv;
       parent->write_reg(writeAddress,r1);      
       break;
 
     case REG_LONG:
-      v = (int)(result.value[0]+0.5);
+      v = I(result.value[0]);
       uv = (unsigned int)v;
       r1 = (unsigned short)( uv >> 16 );
       r2 = (unsigned short)( uv & 0xFFFF );
@@ -1399,7 +1442,7 @@ void ExpParser::EvaluateWrite(double wValue) {
       break;
 
     case REG_LONGLSB:
-      v = (int)(result.value[0]+0.5);
+      v = I(result.value[0]);
       uv = (unsigned int)v;
       r1 = (unsigned short)( uv >> 16 );
       r2 = (unsigned short)( uv & 0xFFFF );
@@ -1409,7 +1452,7 @@ void ExpParser::EvaluateWrite(double wValue) {
       break;
 
     case REG_ULONG:
-      uv = (unsigned int)(result.value[0]+0.5);
+      uv = UI(result.value[0]);
       r1 = (unsigned short)( uv >> 16 );
       r2 = (unsigned short)( uv & 0xFFFF );
       input.push_back(r1);
@@ -1418,7 +1461,7 @@ void ExpParser::EvaluateWrite(double wValue) {
       break;
 
     case REG_ULONGLSB:
-      uv = (unsigned int)(result.value[0]+0.5);
+      uv = UI(result.value[0]);
       r1 = (unsigned short)( uv >> 16 );
       r2 = (unsigned short)( uv & 0xFFFF );
       input.push_back(r2);
@@ -1443,7 +1486,11 @@ void ExpParser::EvaluateWrite(double wValue) {
       break;
 
     case REG_COIL:
-      parent->write_coil(writeAddress,(short)(result.value[0]+0.5));
+      parent->write_coil(writeAddress,US(result.value[0]));
+      break;
+
+    case REG_BIT:
+      parent->write_bit(writeAddress,writeBitIndex,US(result.value[0]));
       break;
   }
 

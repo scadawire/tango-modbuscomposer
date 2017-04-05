@@ -37,7 +37,7 @@ RELEASE      = Release_$(MAJOR_VERS)_$(MINOR_VERS)
 # # - DEBUG     : debug symbols - no optimization
 # # - OPTIMIZED : no debug symbols - optimization level set to O2
 # #-----------------------------------------------------------------------------
-RELEASE_TYPE = DEBUG
+RELEASE_TYPE = OPTIMIZED
 
 #=============================================================================
 # OUTPUT_TYPE can be one of the following :
@@ -159,8 +159,8 @@ include $(MAKE_ENV)/common_target.opt
 
 $(OBJDIR)/ExpParserTst.o: ExpParserTst.cpp 
 	$(CC) $(CXXFLAGS) -c $< -o $(OBJDIR)/ExpParserTst.o
-ExpParserTst: $(OBJDIR)/ExpParser.o $(OBJDIR)/ExpParserTst.o
-	g++ $(LDFLAGS) $(OBJDIR)/ExpParserTst.o $(OBJDIR)/ExpParser.o -o ExpParserTst
+ExpParserTst: $(LIB_OBJS) $(OBJDIR)/ExpParserTst.o
+	g++ $(LDFLAGS) $(OBJDIR)/ExpParserTst.o $(LIB_OBJS) -o ExpParserTst
 
 $(OBJDIR)/SerialClass.o: $(SERIAL_DIR)/SerialClass.cpp
 	$(CC) $(CXXFLAGS) -c $< -o $(OBJDIR)/SerialClass.o

@@ -1,7 +1,13 @@
+namespace ModbusComposer_ns
+{
+class ExpParser;
+}
+
 #include <ExpParser.h>
 #include <iostream>
 
 using namespace std;
+using namespace ModbusComposer_ns;
 
 Tango::DeviceProxy *modbusDS;
 
@@ -40,19 +46,37 @@ void Test(ExpParser *ep,string EXP,double expected) {
   ep->SetExpression(E);
   try {
 
-    ep->Parse();
+    ep->ParseAttribute();
     ep->EvaluateRead(&r);
     bool test;
-    int n;
     switch(ep->GetType()) {
       case Tango::DEV_BOOLEAN:
         test = ep->GetBoolResult(r);
         cout << "\"" << E << "\"=" << test << " (expected: " << expected << ")" << endl;
         break;
       case Tango::DEV_SHORT:
+	{
+	short s = (short)( ep->GetIntegerValue(r.value[0]) );
+        cout << "\"" << E << "\"=" << s << " (expected: " << expected << ")" << dec << endl;
+	}
+	break;
       case Tango::DEV_LONG:
-        n = (int)( r.value[0]+0.5 );
-        cout << "\"" << E << "\"=" << n << " (expected: " << expected << ")" << endl;
+	{
+	int i = (int)( ep->GetIntegerValue(r.value[0]) );
+        cout << "\"" << E << "\"=" << i << " (expected: " << expected << ")" << dec << endl;
+	}
+        break;
+      case Tango::DEV_USHORT:
+	{
+	unsigned short us = (unsigned short)( ep->GetIntegerValue(r.value[0]) );
+        cout << "\"" << E << "\"=" << us << " (expected: " << expected << ")" << dec << endl;
+	}
+	break;
+      case Tango::DEV_ULONG:
+	{
+	unsigned int ui = (unsigned int)( ep->GetIntegerValue(r.value[0]) );
+        cout << "\"" << E << "\"=" << ui << " (expected: " << expected << ")" << dec << endl;
+	}
         break;
       case Tango::DEV_DOUBLE:
         for(int i=0;i<r.lgth;i++)
@@ -99,14 +123,14 @@ int main(int argc,char* argv[]) {
     cerr << "Import failed:" << e.errors[0].desc << endl;
   }
 
-  ExpParser *ep = new ExpParser(modbusDS,NULL);
+  ExpParser *ep = new ExpParser(NULL);
 
   Test(ep,"toto=DevDouble(1.6*2.0/5.0)",1.6*2.0/5.0);
   Test(ep,"toto=DevDouble((4.5+6.7)*(4.5+2)/(37+4))",(4.5+6.7)*(4.5+2)/(37+4));
-  Test(ep,"toto=DevShort(freg(15))",NaN);
-  Test(ep,"toto=DevDouble(freg(20))",NaN);
-  Test(ep,"toto=DevDouble(fregs(7,2))",NaN);
-  Test(ep,"toto=DevShort(Flag(15,15) << 1 | Flag(15,14) )",Flag(15,15) << 1 | Flag(15,14));
+  //Test(ep,"toto=DevShort(freg(15))",NaN);
+  //Test(ep,"toto=DevDouble(freg(20))",NaN);
+  //Test(ep,"toto=DevDouble(fregs(7,2))",NaN);
+  //Test(ep,"toto=DevShort(Flag(15,15) << 1 | Flag(15,14) )",Flag(15,15) << 1 | Flag(15,14));
   Test(ep,"toto=DevLong(2+2-4)",2+2-4);
   Test(ep,"toto=DevLong(2+2*3)",2+2*3);
   Test(ep,"toto=DevLong(2 << 2)",2 << 2);
@@ -118,18 +142,31 @@ int main(int argc,char* argv[]) {
   Test(ep,"toto=DevLong(0x1234 & 0x00F0 >> 4)",0x1234 & 0x00F0 >> 4);
   Test(ep,"toto=DevBoolean(1.23>2.5)",1.23>2.5);
   Test(ep,"toto=DevBoolean(1.23<2.5)",1.23<2.5);
+
+  Test(ep,"toto=DevShort(~0x8000)",(short)~0x8000);
+  Test(ep,"toto=DevUShort(~0x8000)",(unsigned short)~0x8000);
+  Test(ep,"toto=DevLong(~0x8000)",(int)~0x8000);
+  Test(ep,"toto=DevULong(~0x8000)",(unsigned int)~0x8000);
+
+  Test(ep,"toto=DevShort((-5&0x2000) + 2)",(-5&0x2000) + 2);
+  Test(ep,"toto=DevUShort(-1)",(unsigned short)-1);
+  Test(ep,"toto=DevLong(-123456)",-123456);
+  Test(ep,"toto=DevULong(-1)",(unsigned int)-1);
+
+  Test(ep,"toto=DevShort(~0xFFFF | 0x4000)",~0xFFFF | 0x4000);
+
   Test(ep,"toto=DevBoolean((0x1050>>4)==0x105)",(0x1050>>4)==0x105);
   Test(ep,"toto=DevBoolean((2+2-4)==0)",(2+2-4)==0);
   Test(ep,"toto=DevBoolean((2+3-6)==-1)",(2+3-4)==1);
-  Test(ep,"toto=DevBoolean(not Flag(15,15))",0);
-  Test(ep,"toto=DevBoolean(Flag(15,15)!=1)",0);
+  //Test(ep,"toto=DevBoolean(not Flag(15,15))",0);
+  //Test(ep,"toto=DevBoolean(Flag(15,15)!=1)",0);
   Test(ep,"toto=DevBoolean(1.5!=1.5)",0);
-  Test(ep,"toto=DevBoolean(1.5!=1.4)",0);
-  Test(ep,"toto=DevDouble(freg(20),WriteFloat(12,10.0*VALUE))",NaN);
+  Test(ep,"toto=DevBoolean(1.5!=1.4)",1);
+  //Test(ep,"toto=DevDouble(freg(20),WriteFloat(12,10.0*VALUE))",NaN);
   TestState(ep,"ON=2>1");
-  TestState(ep,"ALARM=freg(20)>1.5");
-  TestState(ep,"FAULT=Flag(15,15),Fault on reg 15");
-  TestState(ep,"STT=Flag(15,15)");
+  //TestState(ep,"ALARM=freg(20)>1.5");
+  //TestState(ep,"FAULT=Flag(15,15),Fault on reg 15");
+  //TestState(ep,"STT=Flag(15,15)");
 
   return 0;
 

@@ -831,6 +831,43 @@ void ModbusComposer::write_coil(short address,short value) {
                     
 }
 
+// Global mutex to protect the write bit method in case
+// of serveral modbuscomposer devices in the same server 
+// accessing the same register.
+omni_mutex regAccess;
+
+void ModbusComposer::write_bit(short address,short bitIdx,short value) {
+
+  Tango::DeviceData argout;
+  Tango::DeviceData argin;
+  vector<short> input;
+  vector<short> ret;
+  unsigned short mask = 1 << bitIdx;
+  unsigned short val = (value!=0) << bitIdx;
+
+  omni_mutex_lock oml(regAccess);
+
+  printf("Enter write bit %d\n",bitIdx);
+            
+  input.push_back(address+addressOffset);
+  input.push_back(1);
+  argin << input;
+  argout = modbusDS->command_inout(defaultReadCommand.c_str(),argin);
+  argout >> ret;
+
+  ret[0] &= ~mask;
+  ret[0] |= val;
+
+  input.clear();
+  input.push_back(address+addressOffset);
+  input.push_back(ret[0]);
+  argin << input;  
+  modbusDS->command_inout("PresetSingleRegister",argin);
+
+  printf("Exit write bit %d %04X\n",bitIdx,ret[0]);
+                    
+}
+
 void ModbusComposer::write_reg(short address,short value) {
 
   Tango::DeviceData argin;
@@ -879,9 +916,23 @@ double ModbusComposer::read_self_attribute(char *attName) {
       return (double)v;
     }
     break;
+    case Tango::DEV_USHORT:
+    {
+      Tango::DevUShort v;
+      da >> v;
+      return (double)v;
+    }
+    break;
     case Tango::DEV_LONG:
     {
       Tango::DevLong v;
+      da >> v;
+      return (double)v;
+    }
+    break;
+    case Tango::DEV_ULONG:
+    {
+      Tango::DevULong v;
       da >> v;
       return (double)v;
     }
@@ -940,6 +991,14 @@ void ModbusComposer::write_dyn_attributes(Tango::WAttribute &attr,DynAttribute *
       wValue = (double)w_val;
     }
     break;
+
+    case Tango::DEV_USHORT:
+    {
+      Tango::DevUShort	w_val;
+      attr.get_write_value(w_val);
+      wValue = (double)w_val;
+    }
+    break;
 	 
     case Tango::DEV_DOUBLE:
     {
@@ -956,6 +1015,18 @@ void ModbusComposer::write_dyn_attributes(Tango::WAttribute &attr,DynAttribute *
       wValue = (double)w_val;
     }
     break;
+
+    case Tango::DEV_ULONG:
+    {
+      Tango::DevULong	w_val;
+      attr.get_write_value(w_val);
+      wValue = (double)w_val;
+    }
+    break;
+    
+    //to delete warning build
+    default:
+        wValue = NAN;
 	        
   }
 

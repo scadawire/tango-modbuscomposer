@@ -69,7 +69,7 @@ class DynAttribute: public Tango::Attr {
 
    void set_value(ExpParser *_ep,double wValue) {
 
-     _ep->EvaluateWrite(wValue);
+        _ep->EvaluateWrite(wValue);
       
    }
    
@@ -89,8 +89,15 @@ class DynAttribute: public Tango::Attr {
 	 
 	 case Tango::DEV_SHORT:
          {
-	   _ep->sValue = (Tango::DevShort)(r.value[0]+0.5);
+	   _ep->sValue = (Tango::DevShort)_ep->GetIntegerValue(r.value[0]);
 	   attr.set_value(&_ep->sValue);
+         }
+	 break;
+
+	 case Tango::DEV_USHORT:
+         {
+	   _ep->usValue = (Tango::DevUShort)_ep->GetIntegerValue(r.value[0]);
+	   attr.set_value(&_ep->usValue);
          }
 	 break;
 	 
@@ -103,8 +110,15 @@ class DynAttribute: public Tango::Attr {
 	 
 	 case Tango::DEV_LONG:
          {
-	   _ep->lValue = (Tango::DevLong)(r.value[0]+0.5);
+	   _ep->lValue = (Tango::DevLong)_ep->GetIntegerValue(r.value[0]);
 	   attr.set_value(&_ep->lValue);
+         }
+	 break;
+
+	 case Tango::DEV_ULONG:
+         {
+	   _ep->ulValue = (Tango::DevULong)_ep->GetIntegerValue(r.value[0]);
+	   attr.set_value(&_ep->ulValue);
          }
 	 break;
 	        

@@ -847,8 +847,6 @@ void ModbusComposer::write_bit(short address,short bitIdx,short value) {
 
   omni_mutex_lock oml(regAccess);
 
-  printf("Enter write bit %d\n",bitIdx);
-            
   input.push_back(address+addressOffset);
   input.push_back(1);
   argin << input;
@@ -863,8 +861,6 @@ void ModbusComposer::write_bit(short address,short bitIdx,short value) {
   input.push_back(ret[0]);
   argin << input;  
   modbusDS->command_inout("PresetSingleRegister",argin);
-
-  printf("Exit write bit %d %04X\n",bitIdx,ret[0]);
                     
 }
 

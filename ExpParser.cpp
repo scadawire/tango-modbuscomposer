@@ -293,10 +293,16 @@ void ExpParser::ReadInteger(int *R)
   if( isHexa ) {
     errno=0;
     *R = strtol(S,NULL,16);
-    if(errno!=0) SetError((char *)"Incorrect hexadecimal number",p);
+    if(errno!=0) {
+      cerr << "Invalid hexadecimal number:" << S << endl;
+      SetError((char *)"Incorrect hexadecimal number",p);
+    }
   } else {
     c=sscanf(S,"%d",R);
-    if (c==0) SetError((char *)"Incorrect integer number",p);
+    if (c==0) {
+      cerr << "Invalid number:" << S << endl;
+      SetError((char *)"Incorrect integer number",p);
+    }
   }
   
 }
@@ -1061,6 +1067,8 @@ void ExpParser::ReadWriteFn() {
     regWriteType = REG_DOUBLE; 	  	
   } else if ( strcasecmp(fName,"WriteCoil")==0 ) {
     regWriteType = REG_COIL; 	  	
+  } else if ( strcasecmp(fName,"WriteCoils")==0 ) {
+    regWriteType = REG_COILS;
   } else if ( strcasecmp(fName,"WriteBit")==0 ) {
     regWriteType = REG_BIT; 	  	
   } else {
@@ -1105,6 +1113,40 @@ void ExpParser::ParseState()
 }
 
 // -------------------------------------------------------
+void ExpParser::ReadWriteDefinition() {
+
+  ReadWriteFn();
+  if(EC!='(') SetError((char *)"( expected",current);AV();
+  if( regWriteType==REG_COILS ) {
+
+    if(EC!='{') SetError((char *)"{ expected",current);AV();
+    do {
+      if(EC==',') AV();
+      int c;
+      ReadInteger(&c);
+      coilList.push_back(c);
+    } while(EC==',');
+    if(EC!='}') SetError((char *)"{ expected",current);AV();
+    if(EC!=',') SetError((char *) ", expected", current);AV();
+
+  } else {
+
+    ReadInteger(&writeAddress);
+    if (EC != ',') SetError((char *) ", expected", current);
+    AV();
+    if (regWriteType == REG_BIT) {
+      ReadInteger(&writeBitIndex);
+      if (EC != ',') SetError((char *) ", expected", current);
+      AV();
+    }
+
+  }
+  ReadExpression(&writeTree);
+  if(EC!=')') SetError((char *)") expected",current);AV();
+
+}
+
+// -------------------------------------------------------
 
 void ExpParser::ParseCommand()
 {
@@ -1118,20 +1160,11 @@ void ExpParser::ParseCommand()
 
   safe_free_tree(&evalTree);
   safe_free_tree(&writeTree);
-  
+  coilList.clear();
+
   ReadName(name);
   if(EC!='=') SetError((char *)"= expected",current);AV();
-  ReadWriteFn();
-  if(EC!='(') SetError((char *)"( expected",current);AV();
-  ReadInteger(&writeAddress);
-  if(EC!=',') SetError((char *)", expected",current);AV();
-  if( regWriteType==REG_BIT ) {
-    ReadInteger(&writeBitIndex);
-    if(EC!=',') SetError((char *)", expected",current);AV();
-  }
-  ReadExpression(&writeTree);
-  if(EC!=')') SetError((char *)") expected",current);AV();
-  
+  ReadWriteDefinition();
   if(current!=exprLgth)
     SetError((char *)"Syntax error",current);
 
@@ -1161,12 +1194,7 @@ void ExpParser::ParseAttribute()
   if(EC==',') {
     // We have a write definition
     AV();
-    ReadWriteFn();
-    if(EC!='(') SetError((char *)"( expected",current);AV();
-    ReadInteger(&writeAddress);
-    if(EC!=',') SetError((char *)", expected",current);AV();
-    ReadExpression(&writeTree);
-    if(EC!=')') SetError((char *)") expected",current);AV();
+    ReadWriteDefinition();
   }
 
   if (EC!=')') SetError((char *)") expected",current);AV();
@@ -1487,6 +1515,12 @@ void ExpParser::EvaluateWrite(double wValue) {
 
     case REG_COIL:
       parent->write_coil(writeAddress,US(result.value[0]));
+      break;
+
+    case REG_COILS: {
+        for(int i=0;i<(int)coilList.size();i++)
+          parent->write_coil(coilList[i], US(result.value[0]));
+      }
       break;
 
     case REG_BIT:

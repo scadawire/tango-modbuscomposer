@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
-  <classes name="ModbusComposer" pogoRevision="9.1">
-    <description description="A class to create dynamic attributes above a Modbus interface" title="ModbusComposer" sourcePath="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer" language="Cpp" filestogenerate="XMI   file,Code files,Protected Regions" license="GPL" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
+  <classes name="ModbusComposer" pogoRevision="9.6">
+    <description description="A class to create dynamic attributes above a Modbus interface" title="ModbusComposer" sourcePath="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer" language="Cpp" filestogenerate="XMI   file,CMakeLists,Protected Regions" license="GPL" hasMandatoryProperty="false" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <identification contact="at esrf.fr - pons" author="pons" emailDomain="esrf.fr" classFamily="Calculation" siteSpecific="" platform="All Platforms" bus="Modbus" manufacturer="none" reference=""/>
     </description>
@@ -67,5 +67,6 @@
     <preferences docHome="./doc_html" makefileHome="/segfs/tango/cppserver/env"/>
     <additionalFiles name="ExpParser" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/ExpParser.cpp"/>
     <additionalFiles name="AttributeMap" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/AttributeMap.cpp"/>
+    <additionalFiles name="ModbusComposerThread" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/ModbusComposerThread.cpp"/>
   </classes>
 </pogoDsl:PogoSystem>

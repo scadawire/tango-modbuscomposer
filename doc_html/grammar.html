@@ -13,6 +13,7 @@ BlowerOnOff=DevShort(reg(0x3029),WriteInt(0x3029,VALUE))
 Temp_Threshold=DevDouble(reg(0x3080)/10.0,WriteInt(0x3080,VALUE/10.0))
 CalcPower=DevDouble((4.18/60.0)*CoolingWaterFlow*(CavityWaterOutTemp-CavityWaterInTemp))
 Circumference=DevDouble(992/xattr('sy/ms/1/frequency')*299792458)
+Reset_All=DevShort( coil(3) | coil(4) | coil(5) , WriteCoils({3,4,5},VALUE))
 
 <b>Exemple of dynamic command expression:</b>
 
@@ -32,7 +33,7 @@ First states in the above list have a highest priority.
 
 <b>Grammar</b>
 
- &lt;attdef&gt; ::= &lt;name&gt; '=' &lt;type&gt;'(' &lt;expr&gt; [, &lt;writefn&gt;'('&lt;integer&gt;,&lt;expr&gt;')']')' 
+ &lt;attdef&gt; ::= &lt;name&gt; '=' &lt;type&gt;'(' &lt;expr&gt; [, &lt;writefn&gt;'('&lt;writefn_params&gt;,&lt;expr&gt;')']')'
  &lt;statedef&gt; ::= &lt;name&gt; '=' &lt;expr&gt; [, &lt;status_string&gt;]                          
                                                                                
  &lt;expr&gt;   ::= &lt;factor1&gt; [ &lt;oper1&gt; &lt;factor1&gt; ]                                  
@@ -90,14 +91,19 @@ First states in the above list have a highest priority.
  &lt;writefn&gt;  ::= 'WriteInt' |       //Write 16 bit registers (signed)
                 'WriteUInt' |      //Write 16 bit registers (unsigned)
                 'WriteLong' |      //Write 2*16 bit registers (signed)
-		'WriteBit' |       // Write bit of a 16 bit register (Thread Safe)
+                'WriteBit' |       //Write bit of a 16 bit register (Thread Safe) params=adress,bitindex
                 'WriteULong' |     //Write 2*16 bit registers (unsigned)
                 'WriteLongLSB' |   //Write 2*16 bit registers (signed lsb first)
                 'WriteULongLSB' |  //Write 2*16 bit registers (unsigned lsb first)
                 'WriteFloat' |     //Write float value in 2 consecutive regs
                 'WriteDouble' |    //Write double value in 4 consecutive regs
-                'WriteCoil'        //Write single coil
-                                                                               
+                'WriteCoil' |      //Write single coil
+                'WriteCoils'       //Write mulitple coils params={coillist}
+
+ &lt;writefn_params&gt; ::= &lt;integer&gt; |
+                      &lt;integer&gt;,&lt;integer&gt; |            // For WriteBit
+                      '{' &lt;integer&gt;,[&lt;integer&gt;]* '}'   // Integer list for WriteCoils
+
  &lt;type&gt;     ::= 'DevBoolean' | 'DevShort' | 'DevDouble' | 'DevLong' |            
                 'DevVarDoubleArray' | 'DevUShort' | 'DevULong'                                                
                                                                                

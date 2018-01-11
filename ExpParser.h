@@ -130,6 +130,7 @@ using namespace std;
 #define REG_LONGLSB  8     
 #define REG_ULONGLSB 9     
 #define REG_BIT      10
+#define REG_COILS    11
 
 #define MAXLENGHT       64  // Maximun name length
 #define MAXVALUELENGTH  64  // Maximum vector length
@@ -247,6 +248,7 @@ private:
   void   ReadType();
   void   ReadState();
   void   ReadWriteFn();
+  void   ReadWriteDefinition();
   void   ReadDouble(double *R);
   void   ReadInteger(int *R);
   void   AddNode(CALCFN fn,ETREE_NODE info,ETREE **t,ETREE *left,ETREE *right);
@@ -275,6 +277,7 @@ private:
   int  writeBitIndex;     // Write Bit index
   int  exprLgth;          // Expression length
   double writeVALUE;      // Value used if write expression
+  vector<int> coilList;   // List of coils for WriteCoils command
 
   ETREE *evalTree;
   ETREE *writeTree;

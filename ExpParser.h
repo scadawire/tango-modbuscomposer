@@ -227,6 +227,7 @@ public:
 
   // Temporary value
   Tango::DevDouble  dValue;
+  Tango::DevFloat   fValue;
   Tango::DevBoolean bValue;
   Tango::DevLong    lValue;
   Tango::DevShort   sValue;

@@ -994,6 +994,9 @@ void ExpParser::ReadType() {
   } else if ( strcasecmp(tName,"DevDouble")==0 ) {
     isSpectrum = false;
     type = Tango::DEV_DOUBLE;
+  } else if ( strcasecmp(tName,"DevFloat")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_FLOAT;
   } else if ( strcasecmp(tName,"DevLong")==0 ) {
     isSpectrum = false;
     type = Tango::DEV_LONG;

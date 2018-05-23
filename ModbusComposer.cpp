@@ -439,8 +439,11 @@ void ModbusComposer::read_attr_hardware(TANGO_UNUSED(vector<long> &attr_list))
 void ModbusComposer::add_dynamic_attributes()
 {
 	/*----- PROTECTED REGION ID(ModbusComposer::add_dynamic_attributes) ENABLED START -----*/
-	
+
+
 	for(int i=0;i<(int)dynamicAttributes.size();i++) {
+
+    DEBUG_STREAM << "ModbusComposer::add_dynamic_attributes() Parse: " <<  dynamicAttributes[i] << endl;
 
 	  // Expression parser
 	  ExpParser *ep = new ExpParser(this);
@@ -448,7 +451,7 @@ void ModbusComposer::add_dynamic_attributes()
 	  
 	  try {	  
 	    ep->ParseAttribute();
-          } catch( Tango::DevFailed &e ) {	  
+    } catch( Tango::DevFailed &e ) {
 	    cerr << device_name << ":Parse Error in : " << dynamicAttributes[i] << endl;
 	    cerr << e.errors[0].desc << endl;
             Tango::Except::throw_exception(
@@ -460,22 +463,28 @@ void ModbusComposer::add_dynamic_attributes()
 	  // READ/WRITE type
 	  Tango::AttrWriteType rwType;
 	  if( ep->HasWriteExpression() ) {
-            rwType = Tango::READ_WRITE;
-          } else {
-            rwType = Tango::READ;
-          }
+      rwType = Tango::READ_WRITE;
+    } else {
+      rwType = Tango::READ;
+    }
 	    
 	  // Create attribute	  	  
-	  if( !ep->IsSpectrum() ) {	    	  	
-	    DynAttribute *att = new DynAttribute(ep->GetName(),ep->GetType(),rwType);
-	    add_attribute(att);
-	  } else {
-	    DynSpecAttribute *att = new DynSpecAttribute(ep->GetName(),ep->GetType(),MAXVALUELENGTH);
-	    add_attribute(att);
-	  }
-	  
-	  attMap.add(string(ep->GetName()),ep);
-	
+    try {
+
+	    if( !ep->IsSpectrum() ) {
+	      DynAttribute *att = new DynAttribute(ep->GetName(),ep->GetType(),rwType);
+        add_attribute(att);
+	    } else {
+	      DynSpecAttribute *att = new DynSpecAttribute(ep->GetName(),ep->GetType(),MAXVALUELENGTH);
+	      add_attribute(att);
+	    }
+
+	    attMap.add(string(ep->GetName()),ep);
+
+    } catch(Tango::DevFailed &e) {
+      cerr << "Warning: Cannot add " << ep->GetName() << " : " << e.errors[0].desc << endl;
+    }
+
 	}
 	
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::add_dynamic_attributes
@@ -939,7 +948,14 @@ double ModbusComposer::read_self_attribute(char *attName) {
       da >> v;
       return v;
     }
-    break;   
+    break;
+    case Tango::DEV_FLOAT:
+    {
+      Tango::DevFloat v;
+      da >> v;
+      return (double)v;
+    }
+    break;
     default:
        Tango::Except::throw_exception(
          (const char *)"ModbusComposer::error_read",
@@ -1003,7 +1019,15 @@ void ModbusComposer::write_dyn_attributes(Tango::WAttribute &attr,DynAttribute *
       wValue = w_val;
     }
     break;
-	 
+
+    case Tango::DEV_FLOAT:
+    {
+      Tango::DevFloat	w_val;
+      attr.get_write_value(w_val);
+      wValue = (double)w_val;
+    }
+    break;
+
     case Tango::DEV_LONG:
     {
       Tango::DevLong	w_val;

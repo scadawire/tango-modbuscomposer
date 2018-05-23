@@ -107,7 +107,14 @@ class DynAttribute: public Tango::Attr {
 	   attr.set_value(&_ep->dValue);
          }
 	 break;
-	 
+
+	 case Tango::DEV_FLOAT:
+	 {
+		 _ep->fValue = (Tango::DevFloat)r.value[0];
+		 attr.set_value(&_ep->fValue);
+	 }
+	 break;
+
 	 case Tango::DEV_LONG:
          {
 	   _ep->lValue = (Tango::DevLong)_ep->GetIntegerValue(r.value[0]);

@@ -230,6 +230,10 @@ void ExpParser::ReadDouble(double *R)
       AV();
     }
 
+    if (EC=='+') {
+      AV();
+    }
+
     while (EC>='0' && EC<='9')
     {
       stradd(ex,EC);

@@ -814,6 +814,22 @@ void ExpParser::ReadTerm(ETREE **node)
               }
               break;
 
+    case 'M':
+    case 'm': if ( Match("mod(") ) {
+        AV(4);
+        ReadExpression(&l_t);
+        if (EC!=',') SetError((char *)", expected",current);
+        AV();
+        ReadExpression(&r_t);
+        AddNode( OPER_MOD , elem , node , l_t , r_t);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
+
     default: if( (EC>='A' && EC<='Z') || 
                  (EC>='a' && EC<='z') ||
                  (EC=='_')) 

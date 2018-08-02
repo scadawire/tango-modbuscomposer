@@ -48,6 +48,7 @@
 /*               'sqrt(' <exp> ')' |                                             */
 /*               'fact(' <exp> ')'  |                                            */
 /*               'pow(' <exp>,<exp> ')'  |                                       */
+/*               'mod(' <exp>,<exp> ')'  |                                       */
 /*               'sum(' <variable>,<double>,<double> ')' |                       */
 /*                                                                               */
 /*               'xattr('' <full_qualified_att_name> '')' |   (Extern tango att)   */

@@ -65,7 +65,9 @@ First states in the above list have a highest priority.
                'sqrt(' &lt;exp&gt; ')' |                                             
                'fact(' &lt;exp&gt; ')'  |                                            
                'pow(' &lt;exp&gt;,&lt;exp&gt; ')'  |                                       
-                                                                               
+               'mod(' &lt;exp&gt;,&lt;exp&gt; ')'  |
+               'sum(' <string>,<integer>,<integer> ')' |   // Sum of variable from name(i1) to name(i2)
+
                                                       //Scalar reading:          
                'reg(' &lt;integer&gt; ')' |                 //Read 16 bit signed       
                'ureg(' &lt;integer&gt; ')' |                //Read 16 bit unsigned     

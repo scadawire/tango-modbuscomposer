@@ -333,6 +333,7 @@ VALUE OPER_MOD(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   if (b->lgth == 1) {
     for (int i = 0; i < a->lgth && errno==0; i++) {
       r.value[i] = fmod(a->value[i], b->value[0]);
+      if(r.value[i]<=0.0) r.value[i]+=b->value[0];
     }
     if( errno!=0 ) obj->SetError((char *)strerror(errno));
     r.lgth = a->lgth;

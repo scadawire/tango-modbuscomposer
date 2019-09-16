@@ -63,6 +63,22 @@ static float RegistersToFloat(short reg1,short reg2) {
 
 }
 
+static float RegistersToFloatBE(short reg1,short reg2) {
+
+  float ret;
+
+  unsigned char *ptr = (unsigned char *)&ret;
+  unsigned short r1 = (unsigned short)reg1;
+  unsigned short r2 = (unsigned short)reg2;
+
+  ptr[2] = r1 & 0xFF;
+  ptr[3] = (r1 >> 8) & 0xFF;
+  ptr[0] = r2 & 0xFF;
+  ptr[1] = (r2 >> 8) & 0xFF;
+  return ret;
+
+}
+
 static double RegistersToDouble(short reg1,short reg2,short reg3,short reg4) {
 
   double ret;
@@ -85,6 +101,27 @@ static double RegistersToDouble(short reg1,short reg2,short reg3,short reg4) {
 
 }
 
+static double RegistersToDoubleBE(short reg1,short reg2,short reg3,short reg4) {
+
+  double ret;
+
+  unsigned char *ptr = (unsigned char *)&ret;
+  unsigned short r1 = (unsigned short)reg1;
+  unsigned short r2 = (unsigned short)reg2;
+  unsigned short r3 = (unsigned short)reg3;
+  unsigned short r4 = (unsigned short)reg4;
+
+  ptr[6] = r1 & 0xFF;
+  ptr[7] = (r1 >> 8) & 0xFF;
+  ptr[4] = r2 & 0xFF;
+  ptr[5] = (r2 >> 8) & 0xFF;
+  ptr[2] = r3 & 0xFF;
+  ptr[3] = (r3 >> 8) & 0xFF;
+  ptr[0] = r4 & 0xFF;
+  ptr[1] = (r4 >> 8) & 0xFF;
+  return ret;
+
+}
 
 //== Calculation Function =====================================================
 
@@ -560,10 +597,26 @@ VALUE OPER_FREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   return r;
 }
 
+VALUE OPER_FREGBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 2);
+  r.value[0] = (double)RegistersToFloatBE(regs[0], regs[1]);
+  r.lgth = 1;
+  return r;
+}
+
 VALUE OPER_DREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 4);
   r.value[0] = RegistersToDouble(regs[0], regs[1], regs[2], regs[3]);
+  r.lgth = 1;
+  return r;
+}
+
+VALUE OPER_DREGBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 4);
+  r.value[0] = RegistersToDoubleBE(regs[0], regs[1], regs[2], regs[3]);
   r.lgth = 1;
   return r;
 }
@@ -604,11 +657,29 @@ VALUE OPER_FREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   return r;
 }
 
+VALUE OPER_FREGSBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  int l = info->reginfo.lgth;
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 2);
+  for (int i = 0; i < l; i++) r.value[i] = (double)RegistersToFloatBE(regs[2 * i], regs[2 * i + 1]);
+  r.lgth = l;
+  return r;
+}
+
 VALUE OPER_DREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
   vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 4);
   for (int i = 0; i < l; i++) r.value[i] = RegistersToDouble(regs[2 * i], regs[2 * i + 1], regs[2 * i + 2], regs[2 * i + 3]);
+  r.lgth = l;
+  return r;
+}
+
+VALUE OPER_DREGSBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  int l = info->reginfo.lgth;
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 4);
+  for (int i = 0; i < l; i++) r.value[i] = RegistersToDoubleBE(regs[2 * i], regs[2 * i + 1], regs[2 * i + 2], regs[2 * i + 3]);
   r.lgth = l;
   return r;
 }

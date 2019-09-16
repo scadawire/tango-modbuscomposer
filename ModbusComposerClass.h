@@ -72,65 +72,66 @@ class DynAttribute: public Tango::Attr {
         _ep->EvaluateWrite(wValue);
       
    }
-   
-   void get_value(ExpParser *_ep,Tango::Attribute &attr) {
 
-     VALUE r;
-     _ep->EvaluateRead(&r);
-     
-     switch(get_type()) {
-       
-	 case Tango::DEV_BOOLEAN:
-	 {
-	   _ep->bValue = _ep->GetBoolResult(r);
-	   attr.set_value(&_ep->bValue);
-         }
-	 break;
-	 
-	 case Tango::DEV_SHORT:
-         {
-	   _ep->sValue = (Tango::DevShort)_ep->GetIntegerValue(r.value[0]);
-	   attr.set_value(&_ep->sValue);
-         }
-	 break;
+    void get_value(ExpParser *_ep,Tango::Attribute &attr) {
 
-	 case Tango::DEV_USHORT:
-         {
-	   _ep->usValue = (Tango::DevUShort)_ep->GetIntegerValue(r.value[0]);
-	   attr.set_value(&_ep->usValue);
-         }
-	 break;
-	 
-	 case Tango::DEV_DOUBLE:
-         {
-	   _ep->dValue = r.value[0];
-	   attr.set_value(&_ep->dValue);
-         }
-	 break;
+     if( get_type()==Tango::DEV_STRING ) {
 
-	 case Tango::DEV_FLOAT:
-	 {
-		 _ep->fValue = (Tango::DevFloat)r.value[0];
-		 attr.set_value(&_ep->fValue);
-	 }
-	 break;
+       _ep->EvaluateString();
+       attr.set_value(&_ep->strValue);
 
-	 case Tango::DEV_LONG:
-         {
-	   _ep->lValue = (Tango::DevLong)_ep->GetIntegerValue(r.value[0]);
-	   attr.set_value(&_ep->lValue);
-         }
-	 break;
+     } else {
 
-	 case Tango::DEV_ULONG:
-         {
-	   _ep->ulValue = (Tango::DevULong)_ep->GetIntegerValue(r.value[0]);
-	   attr.set_value(&_ep->ulValue);
+       VALUE r;
+       _ep->EvaluateRead(&r);
+
+       switch (get_type()) {
+
+         case Tango::DEV_BOOLEAN: {
+           _ep->bValue = _ep->GetBoolResult(r);
+           attr.set_value(&_ep->bValue);
          }
-	 break;
-	        
+           break;
+
+         case Tango::DEV_SHORT: {
+           _ep->sValue = (Tango::DevShort) _ep->GetIntegerValue(r.value[0]);
+           attr.set_value(&_ep->sValue);
+         }
+           break;
+
+         case Tango::DEV_USHORT: {
+           _ep->usValue = (Tango::DevUShort) _ep->GetIntegerValue(r.value[0]);
+           attr.set_value(&_ep->usValue);
+         }
+           break;
+
+         case Tango::DEV_DOUBLE: {
+           _ep->dValue = r.value[0];
+           attr.set_value(&_ep->dValue);
+         }
+           break;
+
+         case Tango::DEV_FLOAT: {
+           _ep->fValue = (Tango::DevFloat) r.value[0];
+           attr.set_value(&_ep->fValue);
+         }
+           break;
+
+         case Tango::DEV_LONG: {
+           _ep->lValue = (Tango::DevLong) _ep->GetIntegerValue(r.value[0]);
+           attr.set_value(&_ep->lValue);
+         }
+           break;
+
+         case Tango::DEV_ULONG: {
+           _ep->ulValue = (Tango::DevULong) _ep->GetIntegerValue(r.value[0]);
+           attr.set_value(&_ep->ulValue);
+         }
+           break;
+
+       }
+
      }
-       
      
    }
    

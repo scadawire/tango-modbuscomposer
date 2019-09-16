@@ -17,6 +17,7 @@
 /* Supported gramar :                                                              */
 /*                                                                                 */
 /* <attdef> ::= <name> '=' <type>'(' <expr> [, <writefn>'('<integer>,<expr>')']')' */
+/* <attdef> ::= <name> '= DevString(' <integer> ',' <integer> ')'                  */
 /* <statedef> ::= <name> '=' <expr> [, <status_string>]                          */
 /*                                                                               */
 /* <expr>   ::= <factor1> [ <oper1> <factor1> ]                                  */
@@ -51,13 +52,15 @@
 /*               'mod(' <exp>,<exp> ')'  |                                       */
 /*               'sum(' <variable>,<double>,<double> ')' |                       */
 /*                                                                               */
-/*               'xattr('' <full_qualified_att_name> '')' |   (Extern tango att)   */
+/*               'xattr('' <full_qualified_att_name> '')' |   (Extern tango att) */
 /*                                                                               */
 /*                                                      Scalar reading:          */
 /*               'reg(' <integer> ')' |                 Read 16 bit signed       */
 /*               'ureg(' <integer> ')' |                Read 16 bit unsigned     */
-/*               'freg(' <integer> ')' |                Read 2*16bit float       */
-/*               'dreg(' <integer> ')' |                Read 4*16bit double      */
+/*               'freg(' <integer> ')' |                Read 2*16bit float LE    */
+/*               'fregbe(' <integer> ')' |              Read 2*16bit float BE    */
+/*               'dreg(' <integer> ')' |                Read 4*16bit double LE   */
+/*               'dregbe(' <integer> ')' |              Read 4*16bit double BE   */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*               'coil(' <integer> ')' |                Read coil                */
@@ -65,8 +68,10 @@
 /*                                                      Vector reading:          */
 /*               'regs(' <integer>,<integer> ')' |      Read n*16 bit signed     */
 /*               'uregs(' <integer>,<integer> ')' |     Read n*16 bit unsigned   */
-/*               'fregs(' <integer>,<integer> ')' |     Read n*2*16bit float     */
-/*               'dregs(' <integer>,<integer> ')' |     Read n*4*16bit double    */
+/*               'fregs(' <integer>,<integer> ')' |     Read n*2*16bit float LE  */
+/*               'fregsbe(' <integer>,<integer> ')' |   Read n*2*16bit float BE  */
+/*               'dregs(' <integer>,<integer> ')' |     Read n*4*16bit double LE */
+/*               'dregsbe(' <integer>,<integer> ')' |   Read n*4*16bit double BE */
 /*               'coils(' <integer>,<integer> ')'|      Read multiple coil       */
 /*               'PI'                                                            */
 /*                                                                               */
@@ -212,6 +217,7 @@ public:
 
   // Evaluation
   void   EvaluateRead(VALUE *result);  // Evaluate the read expression
+  void   EvaluateString();             // Evaluate DevString()
   void   EvaluateWrite(double wValue); // Evaluate the write expression and write register(s)
   double GetWriteValue();              // Return current write value
   Tango::DevULong GetIntegerValue(double value);
@@ -234,6 +240,7 @@ public:
   Tango::DevShort   sValue;
   Tango::DevULong   ulValue;
   Tango::DevUShort  usValue;
+  Tango::DevString  strValue;
 
 private:
 
@@ -284,6 +291,9 @@ private:
   ETREE *evalTree;
   ETREE *writeTree;
   vector<DEV_ITEM> devices;
+
+  int stringStartReg;    // DevString attribute
+  int stringLength;      // DevString attribute
 
 };
 

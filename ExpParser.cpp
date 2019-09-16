@@ -79,6 +79,7 @@ ExpParser::ExpParser(ModbusComposer *parent) {
   this->parent = parent;
   evalTree=NULL;
   writeTree=NULL;
+  strValue = NULL;
   memset(expr,0,sizeof(expr));  
   strcpy(name,"");
   strcpy(status,"");
@@ -96,6 +97,7 @@ ExpParser::~ExpParser() {
   for(int i=0;i<(int)devices.size();i++)
     delete devices[i].ds;
   devices.clear();
+  if(strValue) free(strValue);
 
 }
 
@@ -386,8 +388,8 @@ void ExpParser::ReadAttName( char *name ) {
 
 // -------------------------------------------------------
 
-void ExpParser::ReadTerm(ETREE **node)
-{
+void ExpParser::ReadTerm(ETREE **node) {
+
   ETREE *l_t=NULL;
   ETREE *r_t=NULL;
   ETREE_NODE elem;
@@ -406,413 +408,453 @@ void ExpParser::ReadTerm(ETREE **node)
     case '8':
     case '9':
     case '.':  ReadDouble(&(elem.constant));
-               AddNode( OPER_DOUBLE , elem , node , NULL , NULL);
-               break;
-         
-    case '(' : AV();
-               ReadExpression(node);
-               if (EC!=')') SetError((char *)") expected",current);
-               AV();
-               break;
+      AddNode( OPER_DOUBLE , elem , node , NULL , NULL);
+      break;
 
-    // -------------------------------------------------------
-    // unary operator
-    // -------------------------------------------------------
+    case '(' : AV();
+      ReadExpression(node);
+      if (EC!=')') SetError((char *)") expected",current);
+      AV();
+      break;
+
+      // -------------------------------------------------------
+      // unary operator
+      // -------------------------------------------------------
 
     case '-' :AV();
-              ReadTerm(&l_t);
-              AddNode( OPER_MINUS1 , elem , node , l_t , NULL);
-              break;
+      ReadTerm(&l_t);
+      AddNode( OPER_MINUS1 , elem , node , l_t , NULL);
+      break;
 
     case '~' :AV();
-              ReadTerm(&l_t);
-              AddNode( OPER_NEG , elem , node , l_t , NULL);
-	      break;
+      ReadTerm(&l_t);
+      AddNode( OPER_NEG , elem , node , l_t , NULL);
+      break;
 
-    case 'N':	
+    case 'N':
     case 'n': if( Match("not") ) {
-                AV(3);
-                ReadTerm(&l_t);
-		AddNode( OPER_NOT , elem , node , l_t , NULL);    
-    	      } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-	break;
+        AV(3);
+        ReadTerm(&l_t);
+        AddNode( OPER_NOT , elem , node , l_t , NULL);
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
-    // -------------------------------------------------------
-    // Math functions
-    // -------------------------------------------------------
+      // -------------------------------------------------------
+      // Math functions
+      // -------------------------------------------------------
 
     case 'a':
     case 'A': if ( Match("abs(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                AddNode( OPER_ABS , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("asin(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_ASIN , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("acos(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_ACOS , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else  if ( Match("atan(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_ATAN , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(4);
+        ReadExpression(&l_t);
+        AddNode( OPER_ABS , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("asin(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_ASIN , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("acos(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_ACOS , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else  if ( Match("atan(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_ATAN , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'S':
     case 's': if ( Match("sin(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                AddNode( OPER_SIN , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("sqrt(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_SQRT , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("sinh(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_SINH , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("sum(") ) {
-                AV(4);
-                if( (EC>='A' && EC<='Z') || 
-                    (EC>='a' && EC<='z') ||
-                    (EC=='_')) 
-                {
-                  char tmpVName[MAXLENGHT];
-                  double d1,d2;
-                  int i,i1,i2;
+        AV(4);
+        ReadExpression(&l_t);
+        AddNode( OPER_SIN , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("sqrt(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_SQRT , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("sinh(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_SINH , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("sum(") ) {
+        AV(4);
+        if( (EC>='A' && EC<='Z') ||
+            (EC>='a' && EC<='z') ||
+            (EC=='_'))
+        {
+          char tmpVName[MAXLENGHT];
+          double d1,d2;
+          int i,i1,i2;
 
-                  ReadName((char *)tmpVName);
-                  if (EC!=',') SetError((char *)", expected",current);AV();
-                  ReadDouble(&d1);
-                  if (EC!=',') SetError((char *)", expected",current);AV();
-                  ReadDouble(&d2);
-                  if (EC!=')') SetError((char *)") expected",current);AV();
+          ReadName((char *)tmpVName);
+          if (EC!=',') SetError((char *)", expected",current);AV();
+          ReadDouble(&d1);
+          if (EC!=',') SetError((char *)", expected",current);AV();
+          ReadDouble(&d2);
+          if (EC!=')') SetError((char *)") expected",current);AV();
 
-                  // Add all variables
-                  i1 = I(d1);
-                  i2 = I(d2);
+          // Add all variables
+          i1 = I(d1);
+          i2 = I(d2);
 
-                  // 1st
-                  sprintf(elem.name,"%s%d",tmpVName,i1);
-                  AddNode( OPER_NAME , elem , &l_t , NULL , NULL);
+          // 1st
+          sprintf(elem.name,"%s%d",tmpVName,i1);
+          AddNode( OPER_NAME , elem , &l_t , NULL , NULL);
 
-                  for(i=i1+1;i<=i2;i++) {
-                    sprintf(elem.name,"%s%d",tmpVName,i);
-                    AddNode( OPER_NAME , elem , &r_t , NULL , NULL);
-                    AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
-                  }
-                  *node = l_t;
+          for(i=i1+1;i<=i2;i++) {
+            sprintf(elem.name,"%s%d",tmpVName,i);
+            AddNode( OPER_NAME , elem , &r_t , NULL , NULL);
+            AddNode( OPER_PLUS , elem , &l_t , l_t , r_t );
+          }
+          *node = l_t;
 
-                } else {
-                  SetError((char *)"variable prefix name expected",current);
-                }
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        } else {
+          SetError((char *)"variable prefix name expected",current);
+        }
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'C':
     case 'c': if ( Match("cos(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                AddNode( OPER_COS , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("cosh(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_COSH , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("coil(") ) {
-                int idx;
-                AV(5);
-                ReadInteger(&idx);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = 1;
-                AddNode( OPER_COIL , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("coils(") ) {
-                int idx,lgth;
-                AV(6);
-                ReadInteger(&idx);
-		if (EC!=',') SetError((char *)", expected",current);AV();
-                ReadInteger(&lgth);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = lgth;
-                AddNode( OPER_COILS , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(4);
+        ReadExpression(&l_t);
+        AddNode( OPER_COS , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("cosh(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_COSH , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("coil(") ) {
+        int idx;
+        AV(5);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_COIL , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("coils(") ) {
+        int idx,lgth;
+        AV(6);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);AV();
+        ReadInteger(&lgth);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_COILS , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'E':
     case 'e': if ( Match("exp(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                AddNode( OPER_EXP , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(4);
+        ReadExpression(&l_t);
+        AddNode( OPER_EXP , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'D':
     case 'd':  if ( Match("dreg(") ) {
-                int idx;
-                AV(5);
-                ReadInteger(&idx);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = 1;
-                AddNode( OPER_DREG , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();	      
-	      } else if ( Match("dregs(") ) {
-                int idx,lgth;
-                AV(6);
-                ReadInteger(&idx);
-		if (EC!=',') SetError((char *)", expected",current);AV();
-                ReadInteger(&lgth);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = lgth;
-                AddNode( OPER_DREGS , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();	      
-	      } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        int idx;
+        AV(5);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_DREG , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("dregbe(") ) {
+        int idx;
+        AV(7);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_DREGBE , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("dregs(") ) {
+        int idx,lgth;
+        AV(6);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);AV();
+        ReadInteger(&lgth);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_DREGS , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("dregsbe(") ) {
+        int idx,lgth;
+        AV(8);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);AV();
+        ReadInteger(&lgth);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_DREGSBE , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'F':
     case 'f': if ( Match("fact(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_FACT , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("flag(") ) {
-                int idx,bit;
-                AV(5);
-                ReadInteger(&idx);
-		if (EC!=',') SetError((char *)", expected",current);AV();
-                ReadInteger(&bit);
-		elem.flaginfo.idx = idx;
-		elem.flaginfo.bit = bit;
-                AddNode( OPER_FLAG , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();	      
-	      } else if ( Match("freg(") ) {
-                int idx;
-                AV(5);
-                ReadInteger(&idx);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = 1;
-                AddNode( OPER_FREG , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();	      
-	      } else if ( Match("fregs(") ) {
-                int idx,lgth;
-                AV(6);
-                ReadInteger(&idx);
-		if (EC!=',') SetError((char *)", expected",current);AV();
-                ReadInteger(&lgth);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = lgth;
-                AddNode( OPER_FREGS , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();	      
-	      } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_FACT , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("flag(") ) {
+        int idx,bit;
+        AV(5);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);AV();
+        ReadInteger(&bit);
+        elem.flaginfo.idx = idx;
+        elem.flaginfo.bit = bit;
+        AddNode( OPER_FLAG , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("freg(") ) {
+        int idx;
+        AV(5);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_FREG , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("fregbe(") ) {
+        int idx;
+        AV(7);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_FREGBE , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("fregs(") ) {
+        int idx,lgth;
+        AV(6);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);AV();
+        ReadInteger(&lgth);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_FREGS , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("fregsbe(") ) {
+        int idx,lgth;
+        AV(8);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);AV();
+        ReadInteger(&lgth);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_FREGSBE , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'I':
     case 'i': if ( Match("inv(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                AddNode( OPER_INV , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
-    
+        AV(4);
+        ReadExpression(&l_t);
+        AddNode( OPER_INV , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
+
     case 'L':
     case 'l': if ( Match("ln(") ) {
-                AV(3);
-                ReadExpression(&l_t);
-                AddNode( OPER_LN , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("log2(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_LOG2 , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("log10(") ) {
-                AV(6);
-                ReadExpression(&l_t);
-                AddNode( OPER_LOG10 , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(3);
+        ReadExpression(&l_t);
+        AddNode( OPER_LN , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("log2(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_LOG2 , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("log10(") ) {
+        AV(6);
+        ReadExpression(&l_t);
+        AddNode( OPER_LOG10 , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'T':
     case 't': if ( Match("tan(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                AddNode( OPER_TAN , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("tanh(") ) {
-                AV(5);
-                ReadExpression(&l_t);
-                AddNode( OPER_TANH , elem , node , l_t , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(4);
+        ReadExpression(&l_t);
+        AddNode( OPER_TAN , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("tanh(") ) {
+        AV(5);
+        ReadExpression(&l_t);
+        AddNode( OPER_TANH , elem , node , l_t , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'r':
     case 'R': if ( Match("reg(") ) {
-                int idx;
-		AV(4);
-                ReadInteger(&idx);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = 1;
-                AddNode( OPER_REG , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("regs(") ) {
-                int idx,lgth;
-                AV(5);
-                ReadInteger(&idx);
-		if (EC!=',') SetError((char *)", expected",current);
-		AV();
-                ReadInteger(&lgth);
-		if(lgth>MAXVALUELENGTH) SetError((char *)"regs(): too many registers",current);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = lgth;
-                AddNode( OPER_REGS , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        int idx;
+        AV(4);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_REG , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("regs(") ) {
+        int idx,lgth;
+        AV(5);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);
+        AV();
+        ReadInteger(&lgth);
+        if(lgth>MAXVALUELENGTH) SetError((char *)"regs(): too many registers",current);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_REGS , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'u':
     case 'U': if ( Match("ureg(") ) {
-                int idx;
-		AV(5);
-                ReadInteger(&idx);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = 1;
-                AddNode( OPER_UREG , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else if ( Match("uregs(") ) {
-                int idx,lgth;
-                AV(6);
-                ReadInteger(&idx);
-		if (EC!=',') SetError((char *)", expected",current);
-		AV();
-                ReadInteger(&lgth);
-		if(lgth>MAXVALUELENGTH) SetError((char *)"uregs(): too many registers",current);
-		elem.reginfo.idx = idx;
-		elem.reginfo.lgth = lgth;
-                AddNode( OPER_UREGS , elem , node , NULL , NULL);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        int idx;
+        AV(5);
+        ReadInteger(&idx);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = 1;
+        AddNode( OPER_UREG , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else if ( Match("uregs(") ) {
+        int idx,lgth;
+        AV(6);
+        ReadInteger(&idx);
+        if (EC!=',') SetError((char *)", expected",current);
+        AV();
+        ReadInteger(&lgth);
+        if(lgth>MAXVALUELENGTH) SetError((char *)"uregs(): too many registers",current);
+        elem.reginfo.idx = idx;
+        elem.reginfo.lgth = lgth;
+        AddNode( OPER_UREGS , elem , node , NULL , NULL);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'x':
     case 'X': if ( Match("xattr(") ) {
-		AV(6);
-		if (EC!='\'') SetError((char *)"' expected",current);
-	        AV();
-                ReadAttName((char *)elem.name);
-                AddNode( OPER_XATTR , elem , node , NULL , NULL);
-                if (EC!='\'') SetError((char *)"' expected",current);
-                AV();
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(6);
+        if (EC!='\'') SetError((char *)"' expected",current);
+        AV();
+        ReadAttName((char *)elem.name);
+        AddNode( OPER_XATTR , elem , node , NULL , NULL);
+        if (EC!='\'') SetError((char *)"' expected",current);
+        AV();
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
-    // -------------------------------------------------------
-    // Constants
-    // -------------------------------------------------------
+      // -------------------------------------------------------
+      // Constants
+      // -------------------------------------------------------
 
     case 'P':
     case 'p': if ( Match("pi") ) {
-                AV(2);
-                elem.constant=3.14159265358979323846;
-                AddNode( OPER_DOUBLE , elem , node , NULL , NULL);
-              } else if ( Match("pow(") ) {
-                AV(4);
-                ReadExpression(&l_t);
-                if (EC!=',') SetError((char *)", expected",current);
-                AV();
-                ReadExpression(&r_t);
-                AddNode( OPER_POW , elem , node , l_t , r_t);
-                if (EC!=')') SetError((char *)") expected",current);
-                AV();
-              } else {
-                ReadName((char *)elem.name);
-                AddNode( OPER_NAME , elem , node , NULL , NULL);
-              }
-              break;
+        AV(2);
+        elem.constant=3.14159265358979323846;
+        AddNode( OPER_DOUBLE , elem , node , NULL , NULL);
+      } else if ( Match("pow(") ) {
+        AV(4);
+        ReadExpression(&l_t);
+        if (EC!=',') SetError((char *)", expected",current);
+        AV();
+        ReadExpression(&r_t);
+        AddNode( OPER_POW , elem , node , l_t , r_t);
+        if (EC!=')') SetError((char *)") expected",current);
+        AV();
+      } else {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      }
+      break;
 
     case 'M':
     case 'm': if ( Match("mod(") ) {
@@ -830,14 +872,14 @@ void ExpParser::ReadTerm(ETREE **node)
       }
       break;
 
-    default: if( (EC>='A' && EC<='Z') || 
+    default: if( (EC>='A' && EC<='Z') ||
                  (EC>='a' && EC<='z') ||
-                 (EC=='_')) 
-             {
-               ReadName((char *)elem.name);
-               AddNode( OPER_NAME , elem , node , NULL , NULL);
-             } else
-               SetError((char *)"Syntax error",current);
+                 (EC=='_'))
+      {
+        ReadName((char *)elem.name);
+        AddNode( OPER_NAME , elem , node , NULL , NULL);
+      } else
+        SetError((char *)"Syntax error",current);
   }
 
 }
@@ -1026,6 +1068,9 @@ void ExpParser::ReadType() {
   } else if ( strcasecmp(tName,"DevVarDoubleArray")==0 ) {
     isSpectrum = true;
     type = Tango::DEV_DOUBLE;
+  } else if ( strcasecmp(tName,"DevString")==0 ) {
+    isSpectrum = false;
+    type = Tango::DEV_STRING;
   } else {
     char tmpErr[128];
     sprintf(tmpErr,"Type %s not suported",tName);
@@ -1212,12 +1257,26 @@ void ExpParser::ParseAttribute()
   if(EC!='=') SetError((char *)"= expected",current);AV();
   ReadType();
   if(EC!='(') SetError((char *)"( expected",current);AV();
-  ReadExpression(&evalTree);
 
-  if(EC==',') {
-    // We have a write definition
-    AV();
-    ReadWriteDefinition();
+  if( type==Tango::DEV_STRING ) {
+
+    // String attribute
+    ReadInteger(&stringStartReg);
+    if(EC!=',') SetError((char *)", expected",current);AV();
+    ReadInteger(&stringLength);
+    strValue = (char *)malloc(stringLength+1);
+
+  } else {
+
+    // Numerical attribute
+    ReadExpression(&evalTree);
+
+    if (EC == ',') {
+      // We have a write definition
+      AV();
+      ReadWriteDefinition();
+    }
+
   }
 
   if (EC!=')') SetError((char *)") expected",current);AV();
@@ -1448,6 +1507,22 @@ int ExpParser::GetCurrentPos() {
 double ExpParser::GetWriteValue() {
 
   return writeVALUE;
+
+}
+// -------------------------------------------------------
+
+
+void ExpParser::EvaluateString() {
+
+  int nbReg = stringLength / 2 + stringLength % 2;
+  int idx = 0;
+  vector<short> regs = ReadModbusReg(stringStartReg, nbReg);
+
+  for(int i=0;i<nbReg;i++) {
+    if(idx<stringLength) strValue[idx++] = (regs[i] >> 8) & 0xFF;
+    if(idx<stringLength) strValue[idx++] = (regs[i] & 0xFF );
+  }
+  strValue[idx] = 0;
 
 }
 

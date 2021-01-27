@@ -534,7 +534,7 @@ Tango::DevState ModbusComposer::dev_state()
 
 	    // Concat status string of the current state
 	    epStatus = string(stateMap[i].ep->GetStatus());
-            if(epStatus.length()>0) statusStr += epStatus + "\n";
+            if(epStatus.length()>0) statusStr = epStatus + "\n";
 	    i++;
 
 	    // Concact status of other active state

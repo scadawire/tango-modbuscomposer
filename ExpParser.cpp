@@ -417,6 +417,30 @@ void ExpParser::ReadTerm(ETREE **node) {
       AV();
       break;
 
+    case '{' : {
+      AV();
+
+      // Construct a vector
+      ETREE *V[MAXVALUELENGTH];
+      int nbValue = 0;
+      ReadExpression(&V[nbValue++]);
+      while (EC == ',' && nbValue < MAXVALUELENGTH) {
+        AV();
+        ReadExpression(&V[nbValue++]);
+      }
+      if (EC != '}') SetError((char *) "} expected", current);
+
+      int i = 0;
+      for (; i < nbValue - 1 ; i++) {
+        AddNode(OPER_CONCAT, elem, node, V[i], NULL);
+        node = &((*node)->right);
+      }
+      *node = V[i];
+
+      AV();
+      }
+      break;
+
       // -------------------------------------------------------
       // unary operator
       // -------------------------------------------------------
@@ -1616,8 +1640,15 @@ void ExpParser::EvaluateWrite(double wValue) {
       break;
 
     case REG_COILS: {
-        for(int i=0;i<(int)coilList.size();i++)
-          parent->write_coil(coilList[i], US(result.value[0]));
+        if(result.lgth==1) {
+          for (int i = 0; i < (int) coilList.size(); i++)
+            parent->write_coil(coilList[i], US(result.value[0]));
+        } else if((int)coilList.size()==result.lgth) {
+          for (int i = 0; i < (int) coilList.size(); i++)
+            parent->write_coil(coilList[i], US(result.value[i]));
+        } else {
+          SetError((char *)"WriteCoils: invalid value size");
+        }
       }
       break;
 

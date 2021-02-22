@@ -55,38 +55,43 @@ void Test(ExpParser *ep,string EXP,double expected) {
         cout << "\"" << E << "\"=" << test << " (expected: " << expected << ")" << endl;
         break;
       case Tango::DEV_SHORT:
-	{
-	short s = (short)( ep->GetIntegerValue(r.value[0]) );
+      {
+        short s = (short)( ep->GetIntegerValue(r.value[0]) );
         cout << "\"" << E << "\"=" << s << " (expected: " << expected << ")" << dec << endl;
-	}
-	break;
+      }
+        break;
       case Tango::DEV_LONG:
-	{
-	int i = (int)( ep->GetIntegerValue(r.value[0]) );
+      {
+        int i = (int)( ep->GetIntegerValue(r.value[0]) );
         cout << "\"" << E << "\"=" << i << " (expected: " << expected << ")" << dec << endl;
-	}
+      }
         break;
       case Tango::DEV_USHORT:
-	{
-	unsigned short us = (unsigned short)( ep->GetIntegerValue(r.value[0]) );
+      {
+        unsigned short us = (unsigned short)( ep->GetIntegerValue(r.value[0]) );
         cout << "\"" << E << "\"=" << us << " (expected: " << expected << ")" << dec << endl;
-	}
-	break;
+      }
+        break;
       case Tango::DEV_ULONG:
-	{
-	unsigned int ui = (unsigned int)( ep->GetIntegerValue(r.value[0]) );
+      {
+        unsigned int ui = (unsigned int)( ep->GetIntegerValue(r.value[0]) );
         cout << "\"" << E << "\"=" << ui << " (expected: " << expected << ")" << dec << endl;
-	}
+      }
         break;
       case Tango::DEV_DOUBLE:
-        for(int i=0;i<r.lgth;i++)
-        cout << "\"" << E << "\"=" << r.value[i] << " (expected: " << expected << ")" << endl;
+        cout << "\"" << E << "\"=";
+        for(int i=0;i<r.lgth;i++) {
+          cout << r.value[i];
+          if(i<r.lgth-1) cout << ",";
+        }
+
+        cout << " (expected: " << expected << ")" << endl;
         break;
     }
 
   } catch(Tango::DevFailed &e) {
 
-     cerr << "\"" << E << "\": Error: " << e.errors[0].desc << endl;
+    cerr << "\"" << E << "\": Error: " << e.errors[0].desc << endl;
 
   }
 
@@ -153,7 +158,7 @@ int main(int argc,char* argv[]) {
   Test(ep,"toto=DevLong(-123456)",-123456);
   Test(ep,"toto=DevULong(-1)",(unsigned int)-1);
 
-  Test(ep,"toto=DevShort(~0xFFFF | 0x4000)",~0xFFFF | 0x4000);
+  Test(ep,"toto=DevShort(~0xFFFF | 0x4000)",(short)(~0xFFFF | 0x4000));
 
   Test(ep,"toto=DevBoolean((0x1050>>4)==0x105)",(0x1050>>4)==0x105);
   Test(ep,"toto=DevBoolean((2+2-4)==0)",(2+2-4)==0);
@@ -162,6 +167,11 @@ int main(int argc,char* argv[]) {
   //Test(ep,"toto=DevBoolean(Flag(15,15)!=1)",0);
   Test(ep,"toto=DevBoolean(1.5!=1.5)",0);
   Test(ep,"toto=DevBoolean(1.5!=1.4)",1);
+  Test(ep,"toto=DevVarDoubleArray({2}*{4+5})",NAN);
+  Test(ep,"toto=DevVarDoubleArray({1,2})",NAN);
+  Test(ep,"toto=DevVarDoubleArray({1,2+2,1+3*4}*2)",NAN);
+  Test(ep,"toto=DevVarDoubleArray({1,2,3,4}*{1,2,3,4})",NAN);
+  Test(ep,"toto=DevVarDoubleArray({1,2,3,4}*{1,2})",NAN);
   //Test(ep,"toto=DevDouble(freg(20),WriteFloat(12,10.0*VALUE))",NaN);
   TestState(ep,"ON=2>1");
   //TestState(ep,"ALARM=freg(20)>1.5");

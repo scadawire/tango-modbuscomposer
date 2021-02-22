@@ -726,3 +726,14 @@ VALUE OPER_NAME(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   return r;
 }
 
+VALUE OPER_CONCAT(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
+  VALUE r;
+  r.lgth = a->lgth + b->lgth;
+  int k=0;
+  for(int i=0;i<a->lgth;i++)
+    r.value[k++] = a->value[i];
+  for(int i=0;i<b->lgth;i++)
+    r.value[k++] = b->value[i];
+  return r;
+}
+

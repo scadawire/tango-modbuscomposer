@@ -87,8 +87,8 @@ private:
 	vector<STATEITEM> stateMap;
 
 public:
-	short reg(short address);
-	vector<short> regs(short address,int length);
+	short reg(int cmd,short address);
+	vector<short> regs(int cmd,short address,int length);
 	short coil(short address);
 	vector<short> coils(short address,int length);
 	void write_coil(short address,short value);

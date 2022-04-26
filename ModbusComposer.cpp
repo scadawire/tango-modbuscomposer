@@ -733,7 +733,7 @@ vector<short> ModbusComposer::coils(short address,int length) {
 
 }
 
-short ModbusComposer::reg(short address) {
+short ModbusComposer::reg(int cmd,short address) {
   
   short ret;
 
@@ -760,7 +760,17 @@ short ModbusComposer::reg(short address) {
     ret = cacheBuffer[idx];
 
   } else {
-  
+
+    string rCommand = defaultReadCommand;
+    switch(cmd) {
+      case 1:
+        rCommand = "ReadHoldingRegisters";
+        break;
+      case 2:
+        rCommand = "ReadInputRegisters";
+        break;
+    }
+
     Tango::DeviceData argout;
     Tango::DeviceData argin;
     vector<short> input;
@@ -769,7 +779,7 @@ short ModbusComposer::reg(short address) {
     input.push_back(address+addressOffset);
     input.push_back(1);
     argin << input;
-    argout = modbusDS->command_inout(defaultReadCommand.c_str(),argin);
+    argout = modbusDS->command_inout(rCommand,argin);
     argout >> output;
 
     ret = output[0];
@@ -780,7 +790,7 @@ short ModbusComposer::reg(short address) {
 
 }
 
-vector<short> ModbusComposer::regs(short address,int length) {
+vector<short> ModbusComposer::regs(int cmd,short address,int length) {
 
   vector<short> ret;
 
@@ -809,15 +819,25 @@ vector<short> ModbusComposer::regs(short address,int length) {
 
   } else {
 
+    string rCommand = defaultReadCommand;
+    switch(cmd) {
+      case 1:
+        rCommand = "ReadHoldingRegisters";
+        break;
+      case 2:
+        rCommand = "ReadInputRegisters";
+        break;
+    }
+
     Tango::DeviceData argout;
     Tango::DeviceData argin;
     vector<short> input;
     vector<short> output;
-          
+
     input.push_back(address+addressOffset);
     input.push_back(length);
     argin << input;
-    argout = modbusDS->command_inout(defaultReadCommand.c_str(),argin);
+    argout = modbusDS->command_inout(rCommand,argin);
     argout >> output;
     ret = output;
 
@@ -970,6 +990,8 @@ double ModbusComposer::read_self_attribute(char *attName) {
 
 void ModbusComposer::read_dyn_attributes(Tango::Attribute &attr,DynAttribute *src) {
 
+  DEBUG_STREAM << "DynAttribute " << attr.get_name() << endl;
+
   ATTITEM *item = attMap.get(attr.get_name());
   if( item==NULL ) {
     Tango::Except::throw_exception(	    
@@ -979,7 +1001,7 @@ void ModbusComposer::read_dyn_attributes(Tango::Attribute &attr,DynAttribute *sr
   }
 
   src->get_value(item->ep,attr);
-  
+
 }
 
 void ModbusComposer::write_dyn_attributes(Tango::WAttribute &attr,DynAttribute *src) {

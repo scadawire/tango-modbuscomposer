@@ -567,7 +567,7 @@ VALUE OPER_NOT(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_REG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  short reg = obj->ReadModbusReg(info->reginfo.idx);
+  short reg = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx);
   r.value[0] = reg;
   r.lgth = 1;
   return r;
@@ -583,7 +583,7 @@ VALUE OPER_COIL(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_UREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  short reg = obj->ReadModbusReg(info->reginfo.idx);
+  short reg = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx);
   r.value[0] = (unsigned short)(reg);
   r.lgth = 1;
   return r;
@@ -591,7 +591,7 @@ VALUE OPER_UREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_FREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 2);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, 2);
   r.value[0] = (double)RegistersToFloat(regs[0], regs[1]);
   r.lgth = 1;
   return r;
@@ -599,7 +599,7 @@ VALUE OPER_FREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_FREGBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 2);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, 2);
   r.value[0] = (double)RegistersToFloatBE(regs[0], regs[1]);
   r.lgth = 1;
   return r;
@@ -607,7 +607,7 @@ VALUE OPER_FREGBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_DREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 4);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, 4);
   r.value[0] = RegistersToDouble(regs[0], regs[1], regs[2], regs[3]);
   r.lgth = 1;
   return r;
@@ -615,7 +615,7 @@ VALUE OPER_DREG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_DREGBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, 4);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, 4);
   r.value[0] = RegistersToDoubleBE(regs[0], regs[1], regs[2], regs[3]);
   r.lgth = 1;
   return r;
@@ -624,7 +624,7 @@ VALUE OPER_DREGBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_REGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, l);
   for (int i = 0; i < l; i++) r.value[i] = regs[i];
   r.lgth = l;
   return r;
@@ -642,7 +642,7 @@ VALUE OPER_COILS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_UREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, l);
   for (int i = 0; i < l; i++) r.value[i] = (unsigned short) regs[i];
   r.lgth = l;
   return r;
@@ -651,7 +651,7 @@ VALUE OPER_UREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_FREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 2);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, l * 2);
   for (int i = 0; i < l; i++) r.value[i] = (double)RegistersToFloat(regs[2 * i], regs[2 * i + 1]);
   r.lgth = l;
   return r;
@@ -660,7 +660,7 @@ VALUE OPER_FREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_FREGSBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 2);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, l * 2);
   for (int i = 0; i < l; i++) r.value[i] = (double)RegistersToFloatBE(regs[2 * i], regs[2 * i + 1]);
   r.lgth = l;
   return r;
@@ -669,7 +669,7 @@ VALUE OPER_FREGSBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_DREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 4);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, l * 4);
   for (int i = 0; i < l; i++) r.value[i] = RegistersToDouble(regs[2 * i], regs[2 * i + 1], regs[2 * i + 2], regs[2 * i + 3]);
   r.lgth = l;
   return r;
@@ -678,7 +678,7 @@ VALUE OPER_DREGS(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 VALUE OPER_DREGSBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
   int l = info->reginfo.lgth;
-  vector<short> regs = obj->ReadModbusReg(info->reginfo.idx, l * 4);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->reginfo.idx, l * 4);
   for (int i = 0; i < l; i++) r.value[i] = RegistersToDoubleBE(regs[2 * i], regs[2 * i + 1], regs[2 * i + 2], regs[2 * i + 3]);
   r.lgth = l;
   return r;
@@ -686,7 +686,7 @@ VALUE OPER_DREGSBE(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
 
 VALUE OPER_FLAG(ExpParser *obj, ETREE_NODE *info, VALUE *a, VALUE *b) {
   VALUE r;
-  vector<short> regs = obj->ReadModbusReg(info->flaginfo.idx, 1);
+  vector<short> regs = obj->ReadModbusReg(info->reginfo.cmd,info->flaginfo.idx, 1);
   unsigned short mask = 1 << (info->flaginfo.bit);
   unsigned short reg = (unsigned short) (regs[0]);
   if (reg & mask) {

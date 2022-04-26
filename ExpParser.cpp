@@ -578,6 +578,7 @@ void ExpParser::ReadTerm(ETREE **node) {
         int idx;
         AV(5);
         ReadInteger(&idx);
+        elem.reginfo.cmd = 0;
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
         AddNode( OPER_COIL , elem , node , NULL , NULL);
@@ -589,6 +590,7 @@ void ExpParser::ReadTerm(ETREE **node) {
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);AV();
         ReadInteger(&lgth);
+        elem.reginfo.cmd = 0;
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = lgth;
         AddNode( OPER_COILS , elem , node , NULL , NULL);
@@ -617,6 +619,7 @@ void ExpParser::ReadTerm(ETREE **node) {
     case 'd':  if ( Match("dreg(") ) {
         int idx;
         AV(5);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
@@ -626,6 +629,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("dregbe(") ) {
         int idx;
         AV(7);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
@@ -635,6 +639,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("dregs(") ) {
         int idx,lgth;
         AV(6);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);AV();
         ReadInteger(&lgth);
@@ -670,6 +675,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("flag(") ) {
         int idx,bit;
         AV(5);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);AV();
         ReadInteger(&bit);
@@ -681,6 +687,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("freg(") ) {
         int idx;
         AV(5);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
@@ -690,6 +697,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("fregbe(") ) {
         int idx;
         AV(7);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
@@ -699,6 +707,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("fregs(") ) {
         int idx,lgth;
         AV(6);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);AV();
         ReadInteger(&lgth);
@@ -710,6 +719,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("fregsbe(") ) {
         int idx,lgth;
         AV(8);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);AV();
         ReadInteger(&lgth);
@@ -785,6 +795,7 @@ void ExpParser::ReadTerm(ETREE **node) {
     case 'R': if ( Match("reg(") ) {
         int idx;
         AV(4);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
@@ -794,6 +805,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("regs(") ) {
         int idx,lgth;
         AV(5);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);
         AV();
@@ -814,6 +826,7 @@ void ExpParser::ReadTerm(ETREE **node) {
     case 'U': if ( Match("ureg(") ) {
         int idx;
         AV(5);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         elem.reginfo.idx = idx;
         elem.reginfo.lgth = 1;
@@ -823,6 +836,7 @@ void ExpParser::ReadTerm(ETREE **node) {
       } else if ( Match("uregs(") ) {
         int idx,lgth;
         AV(6);
+        elem.reginfo.cmd = ReadCommandName();
         ReadInteger(&idx);
         if (EC!=',') SetError((char *)", expected",current);
         AV();
@@ -1106,6 +1120,28 @@ void ExpParser::ReadType() {
 
 // -------------------------------------------------------
 
+int ExpParser::ReadCommandName() {
+
+  int cmd = 0; // 0=Default, 1=Holding, 2=Input
+
+  if(Match("HOLDING")) {
+    AV(7);
+    cmd=1;
+    if (EC!=',') SetError((char *)", expected",current);
+    AV();
+  } else if(Match("INPUT")) {
+    AV(5);
+    cmd=2;
+    if (EC!=',') SetError((char *)", expected",current);
+    AV();
+  }
+
+  return cmd;
+
+}
+
+// -------------------------------------------------------
+
 string TG_STATE[] = { "ON", "OFF", "CLOSE", "OPEN", "INSERT", "EXTRACT", "MOVING", "STANDBY", "FAULT", 
                       "INIT", "RUNNING", "ALARM", "DISABLE", "UNKNOWN" };
 
@@ -1369,17 +1405,17 @@ VALUE ExpParser::EvalTree(ETREE *t) {
 
 // -------------------------------------------------------
 
-vector<short> ExpParser::ReadModbusReg( int address , int length ) {
+vector<short> ExpParser::ReadModbusReg(int cmd, int address , int length ) {
 
-  return parent->regs(address,length);
+  return parent->regs(cmd, address,length);
 
 }
 
 // -------------------------------------------------------
 
-short ExpParser::ReadModbusReg( int address ) {
+short ExpParser::ReadModbusReg(int cmd, int address ) {
 
-  return parent->reg(address);
+  return parent->reg(cmd,address);
 
 }
 
@@ -1540,7 +1576,7 @@ void ExpParser::EvaluateString() {
 
   int nbReg = stringLength / 2 + stringLength % 2;
   int idx = 0;
-  vector<short> regs = ReadModbusReg(stringStartReg, nbReg);
+  vector<short> regs = ReadModbusReg(0,stringStartReg, nbReg);
 
   for(int i=0;i<nbReg;i++) {
     if(idx<stringLength) strValue[idx++] = (regs[i] >> 8) & 0xFF;

@@ -55,12 +55,12 @@
 /*               'xattr('' <full_qualified_att_name> '')' |   (Extern tango att) */
 /*                                                                               */
 /*                                                      Scalar reading:          */
-/*               'reg(' <integer> ')' |                 Read 16 bit signed       */
-/*               'ureg(' <integer> ')' |                Read 16 bit unsigned     */
-/*               'freg(' <integer> ')' |                Read 2*16bit float LE    */
-/*               'fregbe(' <integer> ')' |              Read 2*16bit float BE    */
-/*               'dreg(' <integer> ')' |                Read 4*16bit double LE   */
-/*               'dregbe(' <integer> ')' |              Read 4*16bit double BE   */
+/*               'reg('[<cmd>,] <integer> ')' |         Read 16 bit signed       */
+/*               'ureg('[<cmd>,] <integer> ')' |        Read 16 bit unsigned     */
+/*               'freg('[<cmd>,] <integer> ')' |        Read 2*16bit float LE    */
+/*               'fregbe('[<cmd>,] <integer> ')' |      Read 2*16bit float BE    */
+/*               'dreg('[<cmd>,] <integer> ')' |        Read 4*16bit double LE   */
+/*               'dregbe('[<cmd>,] <integer> ')' |      Read 4*16bit double BE   */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*               'flag(' <integer>,<integer> ')' |      Read bit n of reg        */
 /*               'coil(' <integer> ')' |                Read coil                */
@@ -95,6 +95,7 @@
 /* <type>     :: 'DevBoolean'| 'DevShort' | 'DevDouble' | 'DevLong' |            */
 /*               'DevVarDoubleArray' |'DevUShort' | 'DevULong'                   */
 /*                                                                               */
+/* <cmd>      ::= HOLDING | INPUT                                                */
 /* <double>   ::= <nb>* '.' <nb> <nb>* ['E' [-] <nb> <nb>*] | <integer>          */
 /* <integer>  ::= ['0x']<nb>*                                                    */
 /* <nb>       ::= '0'..'9'                                                       */
@@ -148,7 +149,8 @@ typedef struct _TVALUE {
 } VALUE;
 
 // reg info
-typedef struct _REGINFO {  
+typedef struct _REGINFO {
+  int cmd; // 0=Default, 1=Holding, 2=Input
   int idx;
   int lgth;  
 } REGINFO;
@@ -222,8 +224,8 @@ public:
   double GetWriteValue();              // Return current write value
   Tango::DevULong GetIntegerValue(double value);
   
-  vector<short> ReadModbusReg( int address , int length ); 
-  short ReadModbusReg( int address );
+  vector<short> ReadModbusReg(int cmd, int address , int length );
+  short ReadModbusReg(int cmd, int address );
   vector<short> ReadModbusCoil( int address , int length ); 
   short ReadModbusCoil( int address );
   double ReadAttribute(char *attName);
@@ -265,6 +267,7 @@ private:
   void   AV(int n);
   bool   Match(string word);
   bool   IsLetter(char c);
+  int    ReadCommandName();
   Tango::DeviceProxy *Import(string devName);
 
   void FloatToRegisters(float f,unsigned short *r1,unsigned short *r2);

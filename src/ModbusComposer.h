@@ -45,9 +45,9 @@ namespace ModbusComposer_ns
 class ModbusComposer;
 }
 
-#include <ExpParser.h>
-#include <AttributeMap.h>
-#include <ModbusComposerThread.h>
+#include "ExpParser.h"
+#include "AttributeMap.h"
+#include "ModbusComposerThread.h"
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer.h
 

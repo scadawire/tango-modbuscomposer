@@ -25,7 +25,7 @@ namespace ModbusComposer_ns
 class ModbusComposerThread;
 }
 
-#include <ModbusComposerThread.h>
+#include "ModbusComposerThread.h"
 
 
 namespace ModbusComposer_ns
@@ -33,7 +33,7 @@ namespace ModbusComposer_ns
 
   // Constructor:
   ModbusComposerThread::ModbusComposerThread(ModbusComposer *modbuscomposer, omni_mutex &m):
-    Tango::LogAdapter(modbuscomposer), mutex(m), ds(modbuscomposer)
+    Tango::LogAdapter(modbuscomposer), ds(modbuscomposer), mutex(m)
   {
     INFO_STREAM << "ModbusComposerThread::ModbusComposerThread(): entering." << endl;
     tickStart = -1;
@@ -60,7 +60,7 @@ namespace ModbusComposer_ns
       try {
 
 
-	if( ds->useCache ) {
+        if( ds->useCache ) {
           input.push_back(ds->cacheStartAddress);
           input.push_back(ds->cacheLength);
           argin << input;
@@ -68,7 +68,7 @@ namespace ModbusComposer_ns
           argout >> outputReg;
         }
 
-	if( ds->useCoilCache ) {
+        if( ds->useCoilCache ) {
           input.push_back(ds->cacheCoilStartAddress);
           input.push_back(ds->cacheCoilLength);
           argin << input;
@@ -76,13 +76,11 @@ namespace ModbusComposer_ns
           argout >> outputCoil;
         }
 
-	readOK = true;
+        readOK = true;
 
       } catch( Tango::DevFailed &e ) {
-
-	readError = e.errors[0].desc;
-	readOK = false;
-
+      	readError = e.errors[0].desc;
+      	readOK = false;
       }
 
       // Update share part
@@ -91,18 +89,20 @@ namespace ModbusComposer_ns
       if( readOK ) {
         ds->cacheBuffer = outputReg;
         ds->cacheCoilBuffer = outputCoil;
-	ds->cacheError = "";
+        ds->cacheError = "";
       } else {
-	ds->cacheError = readError;
-	ds->cacheBuffer.clear();
-	ds->cacheCoilBuffer.clear();
+        ds->cacheError = readError;
+        ds->cacheBuffer.clear();
+        ds->cacheCoilBuffer.clear();
       }
       mutex.unlock();
 
       time_t t1 = get_ticks();
       time_t toSleep = (time_t)(ds->cachePeriod) - (t1-t0);
       if(toSleep>0)
+      {
         usleep(toSleep*1000);
+      }
       
     }
             

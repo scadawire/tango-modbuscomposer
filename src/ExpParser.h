@@ -117,7 +117,7 @@
 #define _EXPPARSERH_
 
 #ifndef TEST
-#include <ModbusComposer.h>
+#include "ModbusComposer.h"
 
 namespace ModbusComposer_ns
 {

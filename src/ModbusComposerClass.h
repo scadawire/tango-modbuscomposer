@@ -42,9 +42,9 @@
 #ifndef ModbusComposerClass_H
 #define ModbusComposerClass_H
 
-#include <tango.h>
-#include <ModbusComposer.h>
-#include <ExpParser.h>
+// #include <tango.h>
+#include "ModbusComposer.h"
+#include "ExpParser.h"
 
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposerClass.h

@@ -21,26 +21,28 @@
 #ifndef _MODBUSCOMPOSERTHREAD_H
 #define _MODBUSCOMPOSERTHREAD_H
 
-#include <ModbusComposer.h>
+#include "ModbusComposer.h"
 
 namespace ModbusComposer_ns
 {
-    class ModbusComposerThread : public omni_thread, public Tango::LogAdapter {
+
+class ModbusComposerThread : public omni_thread, public Tango::LogAdapter
+{
     
-      public:
+public:
 	// Constructor.
 	ModbusComposerThread(ModbusComposer *, omni_mutex &);	
 	void *run_undetached(void *);
-        time_t get_ticks();
+  time_t get_ticks();
 			
-      private:
+private:
 	ModbusComposer *ds;
-        omni_mutex &mutex;
+  omni_mutex &mutex;
 	time_t tickStart;
-        string readError;
+  string readError;
 	bool readOK;
     
-    }; // class ModbusComposerThread
+}; // class ModbusComposerThread
 
 } // namespace ModbusComposer_ns
 

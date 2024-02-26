@@ -35,7 +35,7 @@ static const char *RcsId = "$Id:  $";
 //        (Program Obviously used to Generate tango Object)
 //=============================================================================
 
-#include <ModbusComposer.h>
+#include "ModbusComposer.h"
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer::ModbusComposerStateMachine.cpp
 

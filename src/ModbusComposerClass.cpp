@@ -44,7 +44,7 @@ static const char *HttpServer = "http://www.esrf.eu/computing/cs/tango/tango_doc
 //=============================================================================
 
 
-#include <ModbusComposerClass.h>
+#include "ModbusComposerClass.h"
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposerClass.cpp
 

@@ -40,8 +40,8 @@ static const char *RcsId = "$Id:  $";
 //=============================================================================
 
 
-#include <ModbusComposer.h>
-#include <ModbusComposerClass.h>
+// #include <ModbusComposer.h>
+#include "ModbusComposerClass.h"
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer.cpp
 

@@ -36,7 +36,7 @@ namespace ModbusComposer_ns
 class AttributeMap;
 }
 
-#include <ModbusComposer.h>
+#include "ModbusComposer.h"
 
 using namespace std;
 

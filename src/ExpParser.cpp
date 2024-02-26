@@ -36,12 +36,12 @@ namespace ModbusComposer_ns
 class ExpParser;
 }
 
-#include <ExpParser.h>
+#include "ExpParser.h"
 
 namespace ModbusComposer_ns
 {
 
-#include <CalcFunc.h>
+#include "CalcFunc.h"
 
 // -------------------------------------------------------
 // Utils functions

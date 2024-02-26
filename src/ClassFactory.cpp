@@ -38,10 +38,10 @@ static const char *RcsId = "$Id:  $";
 //        (Program Obviously used to Generate tango Object)
 //=============================================================================
 
-#include <tango.h>
-#include <ModbusComposerClass.h>
-#include <SerialClass.h>
-#include <ModbusClass.h>
+// #include <tango.h>
+#include "ModbusComposerClass.h"
+// #include <SerialClass.h>
+// #include <ModbusClass.h>
 
 //	Add class header files if needed
 
@@ -53,8 +53,8 @@ static const char *RcsId = "$Id:  $";
 void Tango::DServer::class_factory()
 {
 	//	Add method class init if needed
-	add_class(Serial_ns::SerialClass::init("Serial"));	
-	add_class(Modbus_ns::ModbusClass::init("Modbus"));
+	// add_class(Serial_ns::SerialClass::init("Serial"));	
+	// add_class(Modbus_ns::ModbusClass::init("Modbus"));
 	add_class(ModbusComposer_ns::ModbusComposerClass::init("ModbusComposer"));
 }
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer::ClassFactory.cpp

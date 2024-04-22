@@ -108,7 +108,7 @@ public:
 	// Cache managememt
 	ModbusComposerThread  *cacheThread;
 	omni_mutex             cacheMutex;
-        Tango::DevLong         cachePeriod;
+  Tango::DevLong         cachePeriod;
 	Tango::DevLong         cacheStartAddress;
 	Tango::DevLong         cacheLength;
 	vector<short>          cacheBuffer;
@@ -116,7 +116,7 @@ public:
 	Tango::DevLong         cacheCoilLength;
 	vector<short>          cacheCoilBuffer;
 	bool                   cacheOK;
-        string                 cacheError;	
+  string                 cacheError;	
 	bool                   useCache;
 	bool                   useCoilCache;
 
@@ -181,7 +181,7 @@ public:
 	/**
 	 * The device object destructor.
 	 */
-	~ModbusComposer() {delete_device();};
+	~ModbusComposer() {delete_device();}
 
 
 //	Miscellaneous methods

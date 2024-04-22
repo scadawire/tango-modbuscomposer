@@ -42,6 +42,9 @@ static const char *RcsId = "$Id:  $";
 
 // #include <ModbusComposer.h>
 #include "ModbusComposerClass.h"
+#include <yat4tango/DeviceInfo.h>
+#include <yat4tango/Logging.h>
+#include <yat4tango/PropertyHelper.h>
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer.cpp
 
@@ -119,10 +122,14 @@ void ModbusComposer::delete_device()
 	/*----- PROTECTED REGION ID(ModbusComposer::delete_device) ENABLED START -----*/
 	
 	//	Delete device allocated objects
-	if(modbusDS) delete modbusDS;
-	for(int i=0;i<(int)stateMap.size();i++)
-          delete stateMap[i].ep;          
-        stateMap.clear();
+	if(modbusDS) {
+		delete modbusDS;
+		modbusDS = 0;
+	}
+	for(int i=0;i<(int)stateMap.size();i++) {
+  	delete stateMap[i].ep;
+  }
+  stateMap.clear();
 	if( useCache || useCoilCache ) {
 	  useCache=false;
 	  useCoilCache=false;
@@ -135,6 +142,8 @@ void ModbusComposer::delete_device()
 	  cmdMap.clear();
 	}
 	
+  yat4tango::DeviceInfo::release(this);
+  yat4tango::Logging::release(this);
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::delete_device
 }
 
@@ -150,14 +159,17 @@ void ModbusComposer::init_device()
 	/*----- PROTECTED REGION ID(ModbusComposer::init_device_before) ENABLED START -----*/
 	
 	//	Initialization before get_device_property() call
-        modbusDS = NULL;
+  modbusDS = 0;
+  selfDS   = 0;
 	set_state(Tango::ON);
 	set_status("Device is ON");
-        stateMap.clear();
+  stateMap.clear();
 	useCache = false;
 	useCoilCache = false;
-	cacheThread = NULL;
+	cacheThread = 0;
 
+  yat4tango::DeviceInfo::initialize( this, YAT_XSTR(PROJECT_NAME), YAT_XSTR(PROJECT_VERSION) );
+  yat4tango::Logging::initialize(this);
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::init_device_before
 	
 
@@ -168,62 +180,67 @@ void ModbusComposer::init_device()
 	
 	// Modbus connection ----------------------------------------------------------
 
-        if( modbus_name.length()==0 ) {
-            cerr << "ERROR: modbus_device property not defined" << endl;
-            exit(0);
-        }
+  if( modbus_name.length()==0 ) {
+    cerr << "ERROR: modbus_device property not defined" << endl;
+    ERROR_STREAM << "ERROR: modbus_device property not defined" << endl;
+    return;
+  }
 
-        try
-        {
-            modbusDS = new Tango::DeviceProxy(modbus_name);
-        }
-        catch(Tango::DevFailed &e)
-        {
-            cerr << "ERROR: cannot import modbus device " << e.errors[0].desc << endl;
-            exit(0);
-        }
+  try
+  {
+    modbusDS = new Tango::DeviceProxy(modbus_name);
+  }
+  catch(Tango::DevFailed &e)
+  {
+    cerr << "ERROR: cannot import modbus device " << e.errors[0].desc << endl;
+    ERROR_STREAM << "ERROR: cannot import modbus device. Caught [DF]:\n" << e << std::endl;
+    return;
+  }
 
 	// Self connection ----------------------------------------------------------
 
-        try
-        {
-            selfDS = new Tango::DeviceProxy(get_name());
-        }
-        catch(Tango::DevFailed &e)
-        {
-            cerr << "ERROR: cannot import self " << e.errors[0].desc << endl;
-            exit(0);
-        }
+  try
+  {
+    selfDS = new Tango::DeviceProxy(get_name());
+  }
+  catch(Tango::DevFailed &e)
+  {
+    cerr << "ERROR: cannot import self " << e.errors[0].desc << endl;
+    ERROR_STREAM << "ERROR: cannot import self " << e << std::endl;
+    return;
+  }
 
 	// Dynamic states ----------------------------------------------------------
 
 	for(int i=0;i<(int)dynamicStates.size();i++) {
 
-          STATEITEM item;
-          item.ep = new ExpParser(this);
-	  
-          try
-          {
-	    item.ep->SetExpression((char *)dynamicStates[i].c_str());
-            item.ep->ParseState();
+    STATEITEM item;
+    item.ep = new ExpParser(this);
+
+    try
+    {
+			item.ep->SetExpression((char *)dynamicStates[i].c_str());
+      item.ep->ParseState();
 	  }
 	  catch( Tango::DevFailed &e ) 
 	  {
 	    cerr << device_name << ":DynamicStates Parse Error in : " << dynamicStates[i] << endl;
 	    cerr << e.errors[0].desc << endl;
-            exit(0);
+	    ERROR_STREAM << "DynamicStates Parse Error, caught [DF]:\n" << e << std::endl;
+            // exit(0);
+	    return;
 	  }
 
-          item.state = item.ep->GetState();
-          stateMap.push_back(item);
+    item.state = item.ep->GetState();
+    stateMap.push_back(item);
           
-        }
+  }
 
 	// Cache config ----------------------------------------------------------
 	
 	if( cacheConfig.size()>0 || coilCacheConfig.size()>0 ) {
 
-          cacheOK = false;
+    cacheOK = false;
 	  cacheError = "Cache not initialized";
 
 	  if( cacheConfig.size()==3 ) {
@@ -242,12 +259,14 @@ void ModbusComposer::init_device()
 
 	  if( !useCache && !useCoilCache ) {
 	    cerr << device_name << ": Invalid cache configuration, check  CacheConfig or CoilCacheConfig propery" << endl;
-            exit(0);
-          }
+	    ERROR_STREAM << "Invalid cache configuration, check  CacheConfig or CoilCacheConfig propery" << std::endl;
+            // exit(0);
+	    return;
+    }
 
 	  cacheThread = new ModbusComposerThread(this,cacheMutex);
 
-        }
+  }
 
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::init_device
 }
@@ -263,14 +282,14 @@ void ModbusComposer::get_device_property()
 	/*----- PROTECTED REGION ID(ModbusComposer::get_device_property_before) ENABLED START -----*/
 	
 	//	Initialize property data members
-	modbus_name = "";
+	modbus_name.clear();
 	dynamicAttributes.clear();
 	dynamicCommands.clear();
 	dynamicStates.clear();
 	addressOffset = 0;
 	defaultReadCommand = "ReadHoldingRegisters";
-        cacheConfig.clear();
-        coilCacheConfig.clear();
+  cacheConfig.clear();
+  coilCacheConfig.clear();
 
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::get_device_property_before
 
@@ -392,6 +411,14 @@ void ModbusComposer::get_device_property()
 	/*----- PROTECTED REGION ID(ModbusComposer::get_device_property_after) ENABLED START -----*/
 	
 	//	Check device property data members init
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "Modbus_name");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "DynamicAttributes");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "DynamicCommands");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "DynamicStates");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, addressOffset, "AddressOffset");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, defaultReadCommand, "DefaultReadCommand");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "CacheConfig");
+   yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "CoilCacheConfig");
 	
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::get_device_property_after
 }
@@ -404,7 +431,7 @@ void ModbusComposer::get_device_property()
 //--------------------------------------------------------
 void ModbusComposer::always_executed_hook()
 {
-	DEBUG_STREAM << "ModbusComposer::always_executed_hook()  " << device_name << endl;
+	// DEBUG_STREAM << "ModbusComposer::always_executed_hook()  " << device_name << endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::always_executed_hook) ENABLED START -----*/
 	
 	//	code always executed before all requests
@@ -420,7 +447,7 @@ void ModbusComposer::always_executed_hook()
 //--------------------------------------------------------
 void ModbusComposer::read_attr_hardware(TANGO_UNUSED(vector<long> &attr_list))
 {
-	DEBUG_STREAM << "ModbusComposer::read_attr_hardware(vector<long> &attr_list) entering... " << endl;
+	// DEBUG_STREAM << "ModbusComposer::read_attr_hardware(vector<long> &attr_list) entering... " << endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::read_attr_hardware) ENABLED START -----*/
 	
 	//	Add your own code
@@ -439,12 +466,16 @@ void ModbusComposer::read_attr_hardware(TANGO_UNUSED(vector<long> &attr_list))
 void ModbusComposer::add_dynamic_attributes()
 {
 	/*----- PROTECTED REGION ID(ModbusComposer::add_dynamic_attributes) ENABLED START -----*/
-
+// DEBUG_STREAM << "dynamicAttributes.size() = " << dynamicAttributes.size() << std::endl;
 
 	for(int i=0;i<(int)dynamicAttributes.size();i++) {
 
-    DEBUG_STREAM << "ModbusComposer::add_dynamic_attributes() Parse: " <<  dynamicAttributes[i] << endl;
+    // DEBUG_STREAM << "ModbusComposer::add_dynamic_attributes() Parse: " <<  dynamicAttributes[i] << endl;
 
+    if( dynamicAttributes[i].empty() )
+    {
+    	break;
+    }
 	  // Expression parser
 	  ExpParser *ep = new ExpParser(this);
 	  ep->SetExpression((char *)dynamicAttributes[i].c_str());
@@ -455,9 +486,9 @@ void ModbusComposer::add_dynamic_attributes()
 	    cerr << device_name << ":Parse Error in : " << dynamicAttributes[i] << endl;
 	    cerr << e.errors[0].desc << endl;
             Tango::Except::throw_exception(
-              (const char *)"ModbusComposer::error_read",
-              (const char *)"Wrong dynamic attribute configuration",
-              (const char *)"ModbusComposer::add_dynamic_attributes");
+              "ModbusComposer::error_read",
+              "Wrong dynamic attribute configuration",
+              "ModbusComposer::add_dynamic_attributes");
 	  }
 
 	  // READ/WRITE type
@@ -500,7 +531,7 @@ void ModbusComposer::add_dynamic_attributes()
 //--------------------------------------------------------
 Tango::DevState ModbusComposer::dev_state()
 {
-	DEBUG_STREAM << "ModbusComposer::State()  - " << device_name << endl;
+	// DEBUG_STREAM << "ModbusComposer::State()  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::dev_state) ENABLED START -----*/
 	
 	Tango::DevState	argout = Tango::ON;
@@ -508,9 +539,36 @@ Tango::DevState ModbusComposer::dev_state()
 
 	bool found = false;
 	int i=0;
-        VALUE r;
-        try
-        {
+  VALUE r;
+  
+  //- do some check
+  if( modbus_name.empty() )
+  {
+  	argout = Tango::FAULT;
+  	statusStr += "No device Modbus defined!\n";
+  }
+
+  if( !modbusDS )
+  {
+  	argout = Tango::FAULT;
+  	statusStr += "Failed to create proxy on modbus device!\n";
+  }
+
+  if( !selfDS )
+  {
+  	argout = Tango::FAULT;
+  	statusStr += "Failed to import self!\n";
+  }
+
+  if( argout == Tango::FAULT )
+  {
+  	set_state(argout);
+  	set_status(statusStr);
+  	return argout;
+  }
+
+  try
+  {
 
 	  // Find the first active state
 	  while(!found && i<(int)stateMap.size()) {
@@ -524,39 +582,39 @@ Tango::DevState ModbusComposer::dev_state()
 	  if( !found ) {
 
 	    argout = Tango::ON;
-            statusStr = "The device is ON";
+      statusStr = "The device is ON";
 
-          } else {
+    } else {
 
 	    string epStatus;
 	    argout = stateMap[i].ep->GetState();
-            statusStr = "The device is " + string(Tango::DevStateName[argout]) + "\n";
+      statusStr = "The device is " + string(Tango::DevStateName[argout]) + "\n";
 
 	    // Concat status string of the current state
 	    epStatus = string(stateMap[i].ep->GetStatus());
-            if(epStatus.length()>0) statusStr = epStatus + "\n";
+      if(epStatus.length()>0) statusStr = epStatus + "\n";
 	    i++;
 
 	    // Concact status of other active state
-            while(i<(int)stateMap.size() && stateMap[i].ep->GetState()==argout) {
+      while(i<(int)stateMap.size() && stateMap[i].ep->GetState()==argout) {
           
-              stateMap[i].ep->EvaluateRead(&r);
+        stateMap[i].ep->EvaluateRead(&r);
 	      if( stateMap[i].ep->GetBoolResult(r) ) {
 	        epStatus = string(stateMap[i].ep->GetStatus());
-                if(epStatus.length()>0) statusStr += epStatus + "\n";
+          if(epStatus.length()>0) statusStr += epStatus + "\n";
 	      }
 	      i++;
 
 	    }
 	  
-          }
+    }
 
-        } catch(Tango::DevFailed &e) {
+  } catch(Tango::DevFailed &e) {
 
 	  argout = Tango::UNKNOWN;
 	  statusStr = string(e.errors[0].desc);
 
-        }
+  }
 
 	set_status(statusStr);
 
@@ -575,15 +633,15 @@ Tango::DevState ModbusComposer::dev_state()
 //--------------------------------------------------------
 void ModbusComposer::dyn_command(Tango::Command &command)
 {
-	DEBUG_STREAM << "ModbusComposer::" << command.get_name() << "  - " << device_name << endl;
+	// DEBUG_STREAM << "ModbusComposer::" << command.get_name() << "  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::dyn_command) ENABLED START -----*/
 	
 	ATTITEM *item = cmdMap.get(command.get_name());
 	if( item==NULL ) {
 	  Tango::Except::throw_exception(	    
-	  (const char *)"ModbusComposer::error_write",
-	  (const char *)"Unknown command",
-	  (const char *)"ModbusComposer::dyn_command");	
+	  	"ModbusComposer::error_write",
+	  	"Unknown command",
+	  	"ModbusComposer::dyn_command");	
 	  }
 
  	item->ep->EvaluateWrite(0.0);
@@ -607,24 +665,29 @@ void ModbusComposer::add_dynamic_commands()
 	
 	for(int i=0;i<(int)dynamicCommands.size();i++) {
 
+		//- check command is not empty
+    if( dynamicAttributes[i].empty() )
+    {
+    	break;
+    }
 	  // Expression parser
 	  ExpParser *ep = new ExpParser(this);
 	  ep->SetExpression((char *)dynamicCommands[i].c_str());
 	  
 	  try {	  
 	    ep->ParseCommand();
-          } catch( Tango::DevFailed &e ) {	  
+    } catch( Tango::DevFailed &e ) {	  
 	    cerr << device_name << ":Parse Error in : " << dynamicCommands[i] << endl;
 	    cerr << e.errors[0].desc << endl;
             Tango::Except::throw_exception(
-              (const char *)"ModbusComposer::error_read",
-              (const char *)"Wrong dynamic command configuration",
-              (const char *)"ModbusComposer::add_dynamic_commands");
+              "ModbusComposer::error_read",
+              "Wrong dynamic command configuration",
+              "ModbusComposer::add_dynamic_commands");
 	  }
 	    
 	  // Create command	  	  
 	  DynCommandClass *cmd = new DynCommandClass(ep->GetName(),Tango::DEV_VOID,Tango::DEV_VOID);
-          add_command(cmd);
+    add_command(cmd);
 	  
 	  cmdMap.add(string(ep->GetName()),ep);
 	
@@ -650,16 +713,16 @@ short ModbusComposer::coil(short address) {
       
     if( !cacheOK ) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cache_read",
-         (const char *)cacheError.c_str(),
-         (const char *)"ModbusComposer::coil");
+         "ModbusComposer::error_cache_read",
+         cacheError.c_str(),
+         "ModbusComposer::coil");
     }
 
     if(idx<0 || idx>=(int)cacheCoilBuffer.size()) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cahce_read",
-         (const char *)"Coil reading out of cache range",
-         (const char *)"ModbusComposer::coil");
+         "ModbusComposer::error_cahce_read",
+         "Coil reading out of cache range",
+         "ModbusComposer::coil");
     }
 
     ret = cacheCoilBuffer[idx];
@@ -697,16 +760,16 @@ vector<short> ModbusComposer::coils(short address,int length) {
       
     if( !cacheOK ) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cache_read",
-         (const char *)cacheError.c_str(),
-         (const char *)"ModbusComposer::coils");
+         "ModbusComposer::error_cache_read",
+         cacheError.c_str(),
+         "ModbusComposer::coils");
     }
 
     if(idx<0 || idx+length>(int)cacheCoilBuffer.size()) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cahce_read",
-         (const char *)"Register reading out of cache range",
-         (const char *)"ModbusComposer::coils");
+         "ModbusComposer::error_cahce_read",
+         "Register reading out of cache range",
+         "ModbusComposer::coils");
     }
 
     for(int i=0;i<length;i++)
@@ -745,16 +808,16 @@ short ModbusComposer::reg(int cmd,short address) {
       
     if( !cacheOK ) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cache_read",
-         (const char *)cacheError.c_str(),
-         (const char *)"ModbusComposer::reg");
+         "ModbusComposer::error_cache_read",
+         cacheError.c_str(),
+         "ModbusComposer::reg");
     }
 
     if(idx<0 || idx>=(int)cacheBuffer.size()) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cahce_read",
-         (const char *)"Register reading out of cache range",
-         (const char *)"ModbusComposer::reg");
+         "ModbusComposer::error_cahce_read",
+         "Register reading out of cache range",
+         "ModbusComposer::reg");
     }
 
     ret = cacheBuffer[idx];
@@ -802,16 +865,16 @@ vector<short> ModbusComposer::regs(int cmd,short address,int length) {
       
     if( !cacheOK ) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cache_read",
-         (const char *)cacheError.c_str(),
-         (const char *)"ModbusComposer::regs");
+         "ModbusComposer::error_cache_read",
+         cacheError.c_str(),
+         "ModbusComposer::regs");
     }
 
     if(idx<0 || idx+length>(int)cacheBuffer.size()) {
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_cahce_read",
-         (const char *)"Register reading out of cache range",
-         (const char *)"ModbusComposer::regs");
+         "ModbusComposer::error_cahce_read",
+         "Register reading out of cache range",
+         "ModbusComposer::regs");
     }
 
     for(int i=0;i<length;i++)
@@ -978,9 +1041,9 @@ double ModbusComposer::read_self_attribute(char *attName) {
     break;
     default:
        Tango::Except::throw_exception(
-         (const char *)"ModbusComposer::error_read",
-         (const char *)"Cannot read attribute (type not supported)",
-         (const char *)"ModbusComposer::read_self_attribute");
+         "ModbusComposer::error_read",
+         "Cannot read attribute (type not supported)",
+         "ModbusComposer::read_self_attribute");
 
   }
 
@@ -990,14 +1053,14 @@ double ModbusComposer::read_self_attribute(char *attName) {
 
 void ModbusComposer::read_dyn_attributes(Tango::Attribute &attr,DynAttribute *src) {
 
-  DEBUG_STREAM << "DynAttribute " << attr.get_name() << endl;
+  // DEBUG_STREAM << "DynAttribute " << attr.get_name() << endl;
 
   ATTITEM *item = attMap.get(attr.get_name());
   if( item==NULL ) {
     Tango::Except::throw_exception(	    
-      (const char *)"ModbusComposer::error_read",
-      (const char *)"Unknown attribute",
-      (const char *)"ModbusComposer::read_dyn_attributes");	
+      "ModbusComposer::error_read",
+      "Unknown attribute",
+      "ModbusComposer::read_dyn_attributes");	
   }
 
   src->get_value(item->ep,attr);
@@ -1075,9 +1138,9 @@ void ModbusComposer::write_dyn_attributes(Tango::WAttribute &attr,DynAttribute *
   ATTITEM *item = attMap.get(attr.get_name());
   if( item==NULL ) {
     Tango::Except::throw_exception(	    
-      (const char *)"ModbusComposer::error_write",
-      (const char *)"Unknown attribute",
-      (const char *)"ModbusComposer::write_dyn_attributes");	
+      "ModbusComposer::error_write",
+      "Unknown attribute",
+      "ModbusComposer::write_dyn_attributes");	
   }
 
   src->set_value(item->ep,wValue);
@@ -1089,9 +1152,9 @@ void ModbusComposer::read_dynspec_attributes(Tango::Attribute &attr,DynSpecAttri
   ATTITEM *item = attMap.get(attr.get_name());
   if( item==NULL ) {
     Tango::Except::throw_exception(	    
-      (const char *)"ModbusComposer::error_read",
-      (const char *)"Unknown attribute",
-      (const char *)"ModbusComposer::read_dynspec_attributes");	
+      "ModbusComposer::error_read",
+      "Unknown attribute",
+      "ModbusComposer::read_dynspec_attributes");	
   }
 
   src->get_value(item->ep,attr);

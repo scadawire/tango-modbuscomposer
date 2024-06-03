@@ -51,10 +51,21 @@ class ModbusComposer;
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer.h
 
+#ifdef TANGO_LOG
+	// cppTango after c934adea (Merge branch 'remove-cout-definition' into 'main', 2022-05-23)
+	// nothing to do
+#else
+	// cppTango 9.3-backports and older
+	#define TANGO_LOG       cout
+	#define TANGO_LOG_INFO  cout2
+	#define TANGO_LOG_DEBUG cout3
+#endif // TANGO_LOG
+
 /**
  *  ModbusComposer class description:
  *    A class to create dynamic attributes above a Modbus interface
  */
+
 
 namespace ModbusComposer_ns
 {
@@ -67,6 +78,12 @@ namespace ModbusComposer_ns
 	  Tango::DevState state;
 
 	} STATEITEM;
+
+  typedef struct {
+
+     ExpParser *ep;
+
+  } STATUSITEM;
 
 	class DynCommand;
 	class DynAttribute;
@@ -85,10 +102,37 @@ private:
 	AttributeMap attMap;
 	AttributeMap cmdMap;
 	vector<STATEITEM> stateMap;
+  vector<STATUSITEM> statusMap;
 
 public:
+  /**
+   * Read modbus 16bit modbus register
+   * @param cmd 0=>DefaultReadCommand, 1=>ReadHoldingRegister, 2=>ReadInputRegister
+   * @param address Register address
+   * @return Register
+   */
 	short reg(int cmd,short address);
+  /**
+   * Read modbus 16bit modbus registers
+   * @param cmd 0=>DefaultReadCommand, 1=>ReadHoldingRegister, 2=>ReadInputRegister
+   * @param address Register address
+   * @param length Register number
+   * @return Registers
+   */
 	vector<short> regs(int cmd,short address,int length);
+  /**
+   * Read modbus 16bit modbus register using DefaultReadCommand
+   * @param address Register address
+   * @return Register
+   */
+  short reg(short address);
+  /**
+   * Read modbus 16bit modbus registers using DefaultReadCommand
+   * @param address Register address
+   * @param length Register number
+   * @return Registers
+   */
+  vector<short> regs(short address,int length);
 	short coil(short address);
 	vector<short> coils(short address,int length);
 	void write_coil(short address,short value);
@@ -125,33 +169,36 @@ public:
 //	Device property data members
 public:
 	//	Modbus_name:	Name of the Modbus device
-	string	modbus_name;
+	std::string	modbus_name;
 	//	DynamicAttributes:	List of dynacmic attributes
 	//  See <a href=grammar.html>grammar.html</a>
-	vector<string>	dynamicAttributes;
+	std::vector<std::string>	dynamicAttributes;
 	//	DynamicCommands:	List of dynacmic attributes
 	//  See <a href=grammar.html>grammar.html</a>
-	vector<string>	dynamicCommands;
+	std::vector<std::string>	dynamicCommands;
 	//	DynamicStates:	State definitions (Default state is ON)
 	//  See <a href=grammar.html>grammar.html</a>
-	vector<string>	dynamicStates;
+	std::vector<std::string>	dynamicStates;
+	//	DynamicStatus:	Status definitions
+	//  See <a href=grammar.html>grammar.html</a>
+	std::vector<std::string>	dynamicStatus;
 	//	AddressOffset:	Integer offset added to Addresses in every Modbus command call
 	Tango::DevLong	addressOffset;
 	//	DefaultReadCommand:	Command use to read Modbus registers
 	//  (eg. ReadHoldingRegisters)
-	string	defaultReadCommand;
+	std::string	defaultReadCommand;
 	//	CacheConfig:	Cache configuration, the read command is the DefaultReadCommand (if any)
 	//  
 	//  [0] = Start address
 	//  [1] = Number of register
 	//  [2] = Refresh period (ms)
-	vector<Tango::DevLong>	cacheConfig;
+	std::vector<Tango::DevLong>	cacheConfig;
 	//	CoilCacheConfig:	Coil Cache configuration, the read can be only ReadMultipleCoilStatus
 	//  
 	//  [0] = Start address
 	//  [1] = Number of coil
 	//  [2] = Refresh period (ms)
-	vector<Tango::DevLong>	coilCacheConfig;
+	std::vector<Tango::DevLong>	coilCacheConfig;
 
 
 //	Constructors and destructors
@@ -162,7 +209,7 @@ public:
 	 *	@param cl	Class.
 	 *	@param s 	Device Name
 	 */
-	ModbusComposer(Tango::DeviceClass *cl,string &s);
+	ModbusComposer(Tango::DeviceClass *cl,std::string &s);
 	/**
 	 * Constructs a newly device object.
 	 *
@@ -181,7 +228,7 @@ public:
 	/**
 	 * The device object destructor.
 	 */
-	~ModbusComposer() {delete_device();}
+	~ModbusComposer();
 
 
 //	Miscellaneous methods
@@ -208,17 +255,17 @@ public:
 public:
 	//--------------------------------------------------------
 	/*
-	 *	Method      : ModbusComposer::read_attr_hardware()
-	 *	Description : Hardware acquisition for attributes.
+	 *	Method     : ModbusComposer::read_attr_hardware()
+	 *	Description: Hardware acquisition for attributes.
 	 */
 	//--------------------------------------------------------
-	virtual void read_attr_hardware(vector<long> &attr_list);
+	virtual void read_attr_hardware(std::vector<long> &attr_list);
 
 
 	//--------------------------------------------------------
 	/**
-	 *	Method      : ModbusComposer::add_dynamic_attributes()
-	 *	Description : Add dynamic attributes if any.
+	 *	Method     : ModbusComposer::add_dynamic_attributes()
+	 *	Description: Add dynamic attributes if any.
 	 */
 	//--------------------------------------------------------
 	void add_dynamic_attributes();
@@ -240,18 +287,18 @@ public:
 public:
 	/**
 	 *	Command DynCommand related method
-	 *	Description: 
+	 *
 	 *
 	 */
 	virtual void dyn_command(Tango::Command &command);
 	virtual bool is_DynCommand_allowed(const CORBA::Any &any);
-	void add_DynCommand_dynamic_command(string cmdname, bool device);
-	void remove_DynCommand_dynamic_command(string cmdname);
+	void add_DynCommand_dynamic_command(std::string cmdname, bool device);
+	void remove_DynCommand_dynamic_command(std::string cmdname);
 
 	//--------------------------------------------------------
 	/**
-	 *	Method      : ModbusComposer::add_dynamic_commands()
-	 *	Description : Add dynamic commands if any.
+	 *	Method     : ModbusComposer::add_dynamic_commands()
+	 *	Description: Add dynamic commands if any.
 	 */
 	//--------------------------------------------------------
 	void add_dynamic_commands();

@@ -94,7 +94,7 @@ LIB_DIR_USER=
 #
 # -DACE_HAS_EXCEPTIONS -D__ACE_INLINE__ for ACE
 #
-#CXXFLAGS_USR+= -Wall
+CXXFLAGS_USR+= -DEXIT_ON_CONFIGERROR
 
 
 #=============================================================================

@@ -42,9 +42,11 @@ static const char *RcsId = "$Id:  $";
 
 // #include <ModbusComposer.h>
 #include "ModbusComposerClass.h"
+#ifdef USE_YAT4TANGO
 #include <yat4tango/DeviceInfo.h>
 #include <yat4tango/Logging.h>
 #include <yat4tango/PropertyHelper.h>
+#endif
 
 /*----- PROTECTED REGION END -----*/	//	ModbusComposer.cpp
 
@@ -78,12 +80,12 @@ namespace ModbusComposer_ns
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::ModbusComposer()
- *	Description : Constructors for a Tango device
+ *	Method     : ModbusComposer::ModbusComposer()
+ *	Description: Constructors for a Tango device
  *                implementing the classModbusComposer
  */
 //--------------------------------------------------------
-ModbusComposer::ModbusComposer(Tango::DeviceClass *cl, string &s)
+ModbusComposer::ModbusComposer(Tango::DeviceClass *cl, std::string &s)
  : TANGO_BASE_CLASS(cl, s.c_str())
 {
 	/*----- PROTECTED REGION ID(ModbusComposer::constructor_1) ENABLED START -----*/
@@ -109,16 +111,21 @@ ModbusComposer::ModbusComposer(Tango::DeviceClass *cl, const char *s, const char
 	
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::constructor_3
 }
+//--------------------------------------------------------
+ModbusComposer::~ModbusComposer()
+{
+	delete_device();
+}
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::delete_device()
- *	Description : will be called at device destruction or at init command
+ *	Method     : ModbusComposer::delete_device()
+ *	Description: will be called at device destruction or at init command
  */
 //--------------------------------------------------------
 void ModbusComposer::delete_device()
 {
-	DEBUG_STREAM << "ModbusComposer::delete_device() " << device_name << endl;
+	DEBUG_STREAM << "ModbusComposer::delete_device() " << device_name << std::endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::delete_device) ENABLED START -----*/
 	
 	//	Delete device allocated objects
@@ -141,21 +148,23 @@ void ModbusComposer::delete_device()
 	  attMap.clear();
 	  cmdMap.clear();
 	}
-	
+
+#ifdef USE_YAT4TANGO
   yat4tango::DeviceInfo::release(this);
   yat4tango::Logging::release(this);
+#endif
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::delete_device
 }
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::init_device()
- *	Description : will be called at device initialization.
+ *	Method     : ModbusComposer::init_device()
+ *	Description: will be called at device initialization.
  */
 //--------------------------------------------------------
 void ModbusComposer::init_device()
 {
-	DEBUG_STREAM << "ModbusComposer::init_device() create device " << device_name << endl;
+	DEBUG_STREAM << "ModbusComposer::init_device() create device " << device_name << std::endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::init_device_before) ENABLED START -----*/
 	
 	//	Initialization before get_device_property() call
@@ -168,14 +177,16 @@ void ModbusComposer::init_device()
 	useCoilCache = false;
 	cacheThread = 0;
 
+#ifdef USE_YAT4TANGO
   yat4tango::DeviceInfo::initialize( this, YAT_XSTR(PROJECT_NAME), YAT_XSTR(PROJECT_VERSION) );
   yat4tango::Logging::initialize(this);
+#endif
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::init_device_before
-	
+
 
 	//	Get the device properties from database
 	get_device_property();
-	
+
 	/*----- PROTECTED REGION ID(ModbusComposer::init_device) ENABLED START -----*/
 	
 	// Modbus connection ----------------------------------------------------------
@@ -183,6 +194,9 @@ void ModbusComposer::init_device()
   if( modbus_name.length()==0 ) {
     cerr << "ERROR: modbus_device property not defined" << endl;
     ERROR_STREAM << "ERROR: modbus_device property not defined" << endl;
+#ifdef EXIT_ON_CONFIGERROR
+    exit(0);
+#endif
     return;
   }
 
@@ -194,6 +208,9 @@ void ModbusComposer::init_device()
   {
     cerr << "ERROR: cannot import modbus device " << e.errors[0].desc << endl;
     ERROR_STREAM << "ERROR: cannot import modbus device. Caught [DF]:\n" << e << std::endl;
+#ifdef EXIT_ON_CONFIGERROR
+    exit(0);
+#endif
     return;
   }
 
@@ -207,6 +224,9 @@ void ModbusComposer::init_device()
   {
     cerr << "ERROR: cannot import self " << e.errors[0].desc << endl;
     ERROR_STREAM << "ERROR: cannot import self " << e << std::endl;
+#ifdef EXIT_ON_CONFIGERROR
+    exit(0);
+#endif
     return;
   }
 
@@ -227,13 +247,40 @@ void ModbusComposer::init_device()
 	    cerr << device_name << ":DynamicStates Parse Error in : " << dynamicStates[i] << endl;
 	    cerr << e.errors[0].desc << endl;
 	    ERROR_STREAM << "DynamicStates Parse Error, caught [DF]:\n" << e << std::endl;
-            // exit(0);
+#ifdef EXIT_ON_CONFIGERROR
+      exit(0);
+#endif
 	    return;
 	  }
 
     item.state = item.ep->GetState();
     stateMap.push_back(item);
           
+  }
+
+  // Dynamic status ----------------------------------------------------------
+
+  for (int i = 0; i < (int) dynamicStatus.size(); i++) {
+
+    STATUSITEM item;
+    item.ep = new ExpParser(this);
+
+    try {
+      item.ep->SetExpression((char *) dynamicStatus[i].c_str());
+      item.ep->ParseStatus();
+    }
+    catch (Tango::DevFailed &e) {
+      cerr << device_name << ":DynamicStatus Parse Error in : " << dynamicStatus[i] << endl;
+      cerr << e.errors[0].desc << endl;
+      ERROR_STREAM << "DynamicStatus Parse Error, caught [DF]:\n" << e << std::endl;
+#ifdef EXIT_ON_CONFIGERROR
+      exit(0);
+#endif
+      return;
+    }
+
+    statusMap.push_back(item);
+
   }
 
 	// Cache config ----------------------------------------------------------
@@ -273,8 +320,8 @@ void ModbusComposer::init_device()
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::get_device_property()
- *	Description : Read database to initialize property data members.
+ *	Method     : ModbusComposer::get_device_property()
+ *	Description: Read database to initialize property data members.
  */
 //--------------------------------------------------------
 void ModbusComposer::get_device_property()
@@ -286,6 +333,7 @@ void ModbusComposer::get_device_property()
 	dynamicAttributes.clear();
 	dynamicCommands.clear();
 	dynamicStates.clear();
+  dynamicStatus.clear();
 	addressOffset = 0;
 	defaultReadCommand = "ReadHoldingRegisters";
   cacheConfig.clear();
@@ -300,6 +348,7 @@ void ModbusComposer::get_device_property()
 	dev_prop.push_back(Tango::DbDatum("DynamicAttributes"));
 	dev_prop.push_back(Tango::DbDatum("DynamicCommands"));
 	dev_prop.push_back(Tango::DbDatum("DynamicStates"));
+	dev_prop.push_back(Tango::DbDatum("DynamicStatus"));
 	dev_prop.push_back(Tango::DbDatum("AddressOffset"));
 	dev_prop.push_back(Tango::DbDatum("DefaultReadCommand"));
 	dev_prop.push_back(Tango::DbDatum("CacheConfig"));
@@ -311,7 +360,7 @@ void ModbusComposer::get_device_property()
 		//	Call database and extract values
 		if (Tango::Util::instance()->_UseDb==true)
 			get_db_device()->get_property(dev_prop);
-	
+
 		//	get instance on ModbusComposerClass to get class property
 		Tango::DbDatum	def_prop, cl_prop;
 		ModbusComposerClass	*ds_class =
@@ -362,6 +411,17 @@ void ModbusComposer::get_device_property()
 		//	And try to extract DynamicStates value from database
 		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  dynamicStates;
 
+		//	Try to initialize DynamicStatus from class property
+		cl_prop = ds_class->get_class_property(dev_prop[++i].name);
+		if (cl_prop.is_empty()==false)	cl_prop  >>  dynamicStatus;
+		else {
+			//	Try to initialize DynamicStatus from default device value
+			def_prop = ds_class->get_default_device_property(dev_prop[i].name);
+			if (def_prop.is_empty()==false)	def_prop  >>  dynamicStatus;
+		}
+		//	And try to extract DynamicStatus value from database
+		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  dynamicStatus;
+
 		//	Try to initialize AddressOffset from class property
 		cl_prop = ds_class->get_class_property(dev_prop[++i].name);
 		if (cl_prop.is_empty()==false)	cl_prop  >>  addressOffset;
@@ -411,6 +471,7 @@ void ModbusComposer::get_device_property()
 	/*----- PROTECTED REGION ID(ModbusComposer::get_device_property_after) ENABLED START -----*/
 	
 	//	Check device property data members init
+#ifdef USE_YAT4TANGO
    yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "Modbus_name");
    yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "DynamicAttributes");
    yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "DynamicCommands");
@@ -419,19 +480,19 @@ void ModbusComposer::get_device_property()
    yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, defaultReadCommand, "DefaultReadCommand");
    yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "CacheConfig");
    yat4tango::PropertyHelper::create_property_if_empty(this, dev_prop, "", "CoilCacheConfig");
-	
+#endif
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::get_device_property_after
 }
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::always_executed_hook()
- *	Description : method always executed before any command is executed
+ *	Method     : ModbusComposer::always_executed_hook()
+ *	Description: method always executed before any command is executed
  */
 //--------------------------------------------------------
 void ModbusComposer::always_executed_hook()
 {
-	// DEBUG_STREAM << "ModbusComposer::always_executed_hook()  " << device_name << endl;
+	DEBUG_STREAM << "ModbusComposer::always_executed_hook()  " << device_name << std::endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::always_executed_hook) ENABLED START -----*/
 	
 	//	code always executed before all requests
@@ -441,13 +502,13 @@ void ModbusComposer::always_executed_hook()
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::read_attr_hardware()
- *	Description : Hardware acquisition for attributes
+ *	Method     : ModbusComposer::read_attr_hardware()
+ *	Description: Hardware acquisition for attributes
  */
 //--------------------------------------------------------
-void ModbusComposer::read_attr_hardware(TANGO_UNUSED(vector<long> &attr_list))
+void ModbusComposer::read_attr_hardware(TANGO_UNUSED(std::vector<long> &attr_list))
 {
-	// DEBUG_STREAM << "ModbusComposer::read_attr_hardware(vector<long> &attr_list) entering... " << endl;
+	DEBUG_STREAM << "ModbusComposer::read_attr_hardware(std::vector<long> &attr_list) entering... " << std::endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::read_attr_hardware) ENABLED START -----*/
 	
 	//	Add your own code
@@ -458,8 +519,8 @@ void ModbusComposer::read_attr_hardware(TANGO_UNUSED(vector<long> &attr_list))
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::add_dynamic_attributes()
- *	Description : Create the dynamic attributes if any
+ *	Method     : ModbusComposer::add_dynamic_attributes()
+ *	Description: Create the dynamic attributes if any
  *                for specified device.
  */
 //--------------------------------------------------------
@@ -531,7 +592,7 @@ void ModbusComposer::add_dynamic_attributes()
 //--------------------------------------------------------
 Tango::DevState ModbusComposer::dev_state()
 {
-	// DEBUG_STREAM << "ModbusComposer::State()  - " << device_name << endl;
+	DEBUG_STREAM << "ModbusComposer::State()  - " << device_name << std::endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::dev_state) ENABLED START -----*/
 	
 	Tango::DevState	argout = Tango::ON;
@@ -616,24 +677,35 @@ Tango::DevState ModbusComposer::dev_state()
 
   }
 
+  // Evaluate dynamic status
+  for(auto & s : statusMap) {
+
+    s.ep->EvaluateRead(&r);
+    if (s.ep->GetBoolResult(r)) {
+      string epStatus = string(s.ep->GetStatus());
+      statusStr += epStatus + "\n";
+    }
+
+  }
+
 	set_status(statusStr);
 
 	/*----- PROTECTED REGION END -----*/	//	ModbusComposer::dev_state
 	set_state(argout);    // Give the state to Tango.
 	if (argout!=Tango::ALARM)
-		DeviceImpl::dev_state();
+		Tango::DeviceImpl::dev_state();
 	return get_state();  // Return it after Tango management.
 }
 //--------------------------------------------------------
 /**
  *	Command DynCommand related method
- *	Description: 
+ *
  *
  */
 //--------------------------------------------------------
 void ModbusComposer::dyn_command(Tango::Command &command)
 {
-	// DEBUG_STREAM << "ModbusComposer::" << command.get_name() << "  - " << device_name << endl;
+	DEBUG_STREAM << "ModbusComposer::" << command.get_name() << "  - " << device_name << std::endl;
 	/*----- PROTECTED REGION ID(ModbusComposer::dyn_command) ENABLED START -----*/
 	
 	ATTITEM *item = cmdMap.get(command.get_name());
@@ -650,17 +722,17 @@ void ModbusComposer::dyn_command(Tango::Command &command)
 }
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::add_dynamic_commands()
- *	Description : Create the dynamic commands if any
+ *	Method     : ModbusComposer::add_dynamic_commands()
+ *	Description: Create the dynamic commands if any
  *                for specified device.
  */
 //--------------------------------------------------------
 void ModbusComposer::add_dynamic_commands()
 {
 	//	Example to add dynamic command:
-	//	Copy inside the folowing protected area to instanciate at startup.
+	//	Copy inside the following protected area to instantiate at startup.
 	//	add_DynCommand_dynamic_command("MyDynCommandCommand", true);
-	
+
 	/*----- PROTECTED REGION ID(ModbusComposer::add_dynamic_commands) ENABLED START -----*/
 	
 	for(int i=0;i<(int)dynamicCommands.size();i++) {
@@ -796,6 +868,10 @@ vector<short> ModbusComposer::coils(short address,int length) {
 
 }
 
+short ModbusComposer::reg(short address) {
+  return reg(0,address);
+}
+
 short ModbusComposer::reg(int cmd,short address) {
   
   short ret;
@@ -851,6 +927,10 @@ short ModbusComposer::reg(int cmd,short address) {
 
   return ret;
 
+}
+
+vector<short> ModbusComposer::regs(short address, int length) {
+  return regs(0, address, length);
 }
 
 vector<short> ModbusComposer::regs(int cmd,short address,int length) {

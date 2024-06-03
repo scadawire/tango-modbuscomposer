@@ -214,6 +214,7 @@ public:
   void  ParseAttribute();            // Compile attribute expression
   void  ParseCommand();              // Compile command expression
   void  ParseState();                // Compile state expression
+  void  ParseStatus();               // Compile status expression
   int   GetCurrentPos();             // Current parsing cursor position
   bool  HasWriteExpression();        // Return true if a write expression is specified
 

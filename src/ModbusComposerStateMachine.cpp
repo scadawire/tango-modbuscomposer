@@ -57,8 +57,8 @@ namespace ModbusComposer_ns
 
 //--------------------------------------------------------
 /**
- *	Method      : ModbusComposer::is_DynCommand_allowed()
- *	Description : Execution allowed for DynCommand attribute
+ *	Method     : ModbusComposer::is_DynCommand_allowed()
+ *	Description: Execution allowed for DynCommand attribute
  */
 //--------------------------------------------------------
 bool ModbusComposer::is_DynCommand_allowed(TANGO_UNUSED(const CORBA::Any &any))

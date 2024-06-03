@@ -1241,6 +1241,36 @@ void ExpParser::ParseState()
 }
 
 // -------------------------------------------------------
+
+void ExpParser::ParseStatus() {
+
+  exprLgth = strlen(expr);
+  if (exprLgth == 0)
+    SetError((char *) "Empty expression");
+
+  current = 0;
+  EC = expr[0];
+
+  safe_free_tree(&evalTree);
+  safe_free_tree(&writeTree);
+
+  ReadExpression(&evalTree);
+
+  if (EC != ',') SetError((char *) ", expected", current);
+  AV();
+
+  // Status message
+  while (current < exprLgth) {
+    stradd(status, expr[current]);
+    current++;
+  }
+
+  if (current != exprLgth)
+    SetError((char *) "Syntax error", current);
+
+}
+
+// -------------------------------------------------------
 void ExpParser::ReadWriteDefinition() {
 
   ReadWriteFn();

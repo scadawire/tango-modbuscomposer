@@ -32,6 +32,14 @@ ON=Flag(0x3031,13),Blower is ON
 
 First states in the above list have a highest priority.
 
+<b>Exemple of status definition:</b>
+
+not Flag(0x3031,7),Depression air flow
+CoolingWaterFlow&lt;213,Flow too low
+CavityWaterOutTemp&gt;23.4,Temp too high
+
+All strings having a fulfil condition are appended to the status
+
 <b>Grammar</b>
 
  &lt;attdef&gt; ::= &lt;name&gt; '=' &lt;type&gt;'(' &lt;expr&gt; [, &lt;writefn&gt;'('&lt;writefn_params&gt;,&lt;expr&gt;')']')' |
@@ -71,24 +79,24 @@ First states in the above list have a highest priority.
                'mod(' &lt;exp&gt;,&lt;exp&gt; ')'  |                         // Modulo
                'sum(' &lt;string&gt;,&lt;integer&gt;,&lt;integer&gt; ')' |   // Sum of variable from name(i1) to name(i2)
 
-                                                      //Scalar reading:          
-               'reg(' &lt;integer&gt; ')' |                 //Read 16 bit signed       
-               'ureg(' &lt;integer&gt; ')' |                //Read 16 bit unsigned     
-               'freg(' &lt;integer&gt; ')' |                //Read 2*16bit float LE
-               'fregsbe(' &lt;integer&gt;,&lt;integer&gt; ')' |   Read n*2*16bit float BE
-               'dreg(' &lt;integer&gt; ')' |                //Read 4*16bit double LE
-               'dregbe(' &lt;integer&gt; ')' |                //Read 4*16bit double BE
-               'coil(' &lt;integer&gt; ')' |                //Read single coil
-               'flag(' &lt;integer&gt;,&lt;integer&gt; ')' |      //Read bit n of reg (return 1 or 0)
+                                                              //Scalar reading:
+               'reg('[&lt;cmd&gt;,] &lt;integer&gt; ')' |                 //Read 16 bit signed
+               'ureg('[&lt;cmd&gt;,] &lt;integer&gt; ')' |                //Read 16 bit unsigned
+               'freg('[&lt;cmd&gt;,] &lt;integer&gt; ')' |                //Read 2*16bit float LE
+               'fregsbe('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |   //Read n*2*16bit float BE
+               'dreg('[&lt;cmd&gt;,] &lt;integer&gt; ')' |                //Read 4*16bit double LE
+               'dregbe('[&lt;cmd&gt;,] &lt;integer&gt; ')' |              //Read 4*16bit double BE
+               'coil(' &lt;integer&gt; ')' |                        //Read single coil
+               'flag('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |      //Read bit n of reg (return 1 or 0)
                                                                                
-                                                      //Vector reading:          
-               'regs(' &lt;integer&gt;,&lt;integer&gt; ')' |      //Read n*16 bit signed     
-               'uregs(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*16 bit unsigned
-               'fregs(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*2*16bit float LE
-               'fregsbe(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*2*16bit float BE
-               'dregs(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*4*16bit double LE
-               'dregsbe(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*4*16bit double BE
-               'coils(' &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*coils
+                                                              //Vector reading:
+               'regs('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |      //Read n*16 bit signed
+               'uregs('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*16 bit unsigned
+               'fregs('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |     //Read n*2*16bit float LE
+               'fregsbe('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |   //Read n*2*16bit float BE
+               'dregs('[&lt;cmd&gt;,]v &lt;integer&gt;,&lt;integer&gt; ')' |    //Read n*4*16bit double LE
+               'dregsbe('[&lt;cmd&gt;,] &lt;integer&gt;,&lt;integer&gt; ')' |   //Read n*4*16bit double BE
+               'coils(' &lt;integer&gt;,&lt;integer&gt; ')' |             //Read n*coils
                'PI'
                                                                                
  &lt;oper1&gt;    ::= '&' | '|' | '^'                       //lowest precedence     
@@ -116,7 +124,8 @@ First states in the above list have a highest priority.
  &lt;type&gt;     ::= 'DevBoolean' | 'DevShort' | 'DevDouble' | 'DevLong' |  'DevFloat' |
                 'DevVarDoubleArray' | 'DevUShort' | 'DevULong'                                                
                                                                                
- &lt;double&gt;   ::= &lt;nb&gt;* '.' &lt;nb&gt; &lt;nb&gt;* ['E' [-] &lt;nb&gt; &lt;nb&gt;*] | &lt;integer&gt;          
+ &lt;cmd&gt;      ::= HOLDING | INPUT
+ &lt;double&gt;   ::= &lt;nb&gt;* '.' &lt;nb&gt; &lt;nb&gt;* ['E' [-] &lt;nb&gt; &lt;nb&gt;*] | &lt;integer&gt;
  &lt;integer&gt;  ::= ['0x']&lt;nb&gt;*                                                    
  &lt;nb&gt;       ::= '0'..'9'                                                       
  &lt;name&gt;     ::= &lt;letter&gt;[&lt;letter&gt; | &lt;nb&gt;]*                                     

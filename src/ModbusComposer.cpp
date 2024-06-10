@@ -678,14 +678,13 @@ Tango::DevState ModbusComposer::dev_state()
   }
 
   // Evaluate dynamic status
-  for(auto & s : statusMap) {
-
+  for(size_t i=0;i<statusMap.size();i++) {
+    STATUSITEM s = statusMap[i];
     s.ep->EvaluateRead(&r);
     if (s.ep->GetBoolResult(r)) {
       string epStatus = string(s.ep->GetStatus());
       statusStr += epStatus + "\n";
     }
-
   }
 
 	set_status(statusStr);

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="ASCII"?>
+<pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:pogoDsl="http://tango.org/pogo/PogoDsl">
+  <multiClasses pogoRevision="9.9" name="ModbusComposer" sourcePath="/mnt/multipath-shares/segfs/tango/cppserver/calculation/ModbusComposer/src" description="" filestogenerate="XMI   file,Code files,Protected Regions">
+    <classes classname="Serial" sourcePath="../../../protocols/SerialLine.git/src">
+      <inheritances classname="Device_4Impl" sourcePath=""/>
+      <parentClasses>Modbus</parentClasses>
+    </classes>
+    <classes classname="Modbus" sourcePath="../../../protocols/Modbus.verdier/src">
+      <inheritances classname="Device_Impl" sourcePath=""/>
+      <parentClasses>ModbusComposer</parentClasses>
+      <additionalFiles name="ModbusCore" path="/mntdirect/_segfs/tango/cppserver/protocols/Modbus/src/ModbusCore.cpp"/>
+      <additionalFiles name="CacheThread" path="/mntdirect/_segfs/tango/cppserver/protocols/Modbus/src/CacheThread.cpp"/>
+    </classes>
+    <classes classname="ModbusComposer" sourcePath="./" hasDynamic="true">
+      <inheritances classname="Device_Impl" sourcePath=""/>
+      <additionalFiles name="ExpParser" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/ExpParser.cpp"/>
+      <additionalFiles name="AttributeMap" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/AttributeMap.cpp"/>
+      <additionalFiles name="ModbusComposerThread" path="/mntdirect/_segfs/tango/cppserver/calculcation/ModbusComposer/ModbusComposerThread.cpp"/>
+    </classes>
+    <preferences makefileHome="/segfs/tango/cppserver/env"/>
+  </multiClasses>
+</pogoDsl:PogoSystem>

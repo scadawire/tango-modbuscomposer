@@ -3,7 +3,7 @@
 
 <b>Example of dynamic attribute expression:</b>
 
-SwapBits=DevDouble(reg(0)/1000.0,WriteInt(VALUE/1000.0),MEM)
+Current=DevDouble(reg(0)/1000.0,WriteInt(VALUE*1000.0),MEM)   # MEM to set memorized
 CoolingWaterFlow=DevDouble(reg(0x3000)/10.0*1.666)
 CavityWaterFlow=DevDouble(reg(0x3001)/10.0*1.46)
 CavityWaterOutTemp=DevDouble(reg(0x300A)/10.0)

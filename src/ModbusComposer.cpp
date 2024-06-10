@@ -565,6 +565,7 @@ void ModbusComposer::add_dynamic_attributes()
 
 	    if( !ep->IsSpectrum() ) {
 	      DynAttribute *att = new DynAttribute(ep->GetName(),ep->GetType(),rwType);
+        if(ep->HasWriteExpression() && ep->IsMemorized()) att->set_memorized();
         add_attribute(att);
 	    } else {
 	      DynSpecAttribute *att = new DynSpecAttribute(ep->GetName(),ep->GetType(),MAXVALUELENGTH);

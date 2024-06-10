@@ -85,7 +85,7 @@ ExpParser::ExpParser(ModbusComposer *parent) {
   strcpy(status,"");
   state = Tango::UNKNOWN;
   devices.clear();
-
+  isMEM = 0;
 }
 
 // -------------------------------------------------------
@@ -1367,6 +1367,17 @@ void ExpParser::ParseAttribute()
       ReadWriteDefinition();
     }
 
+    if (EC == ',') {
+      // We have a memorized definition
+      AV();
+      if(Match("MEM")) {
+        AV(3);
+        isMEM = 1;
+      } else {
+        SetError((char *)"MEM expected",current);
+      }
+    }
+
   }
 
   if (EC!=')') SetError((char *)") expected",current);AV();
@@ -1738,6 +1749,11 @@ bool ExpParser::GetBoolResult(VALUE r) {
 
 bool ExpParser::HasWriteExpression() {
   return writeTree!=NULL;
+}
+
+// -------------------------------------------------------
+bool ExpParser::IsMemorized() {
+  return isMEM!=0;
 }
 
 // -------------------------------------------------------

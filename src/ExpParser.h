@@ -217,6 +217,7 @@ public:
   void  ParseStatus();               // Compile status expression
   int   GetCurrentPos();             // Current parsing cursor position
   bool  HasWriteExpression();        // Return true if a write expression is specified
+  bool  IsMemorized();               // Return true if attribute should be memorized
 
   // Evaluation
   void   EvaluateRead(VALUE *result);  // Evaluate the read expression
@@ -291,6 +292,7 @@ private:
   int  exprLgth;          // Expression length
   double writeVALUE;      // Value used if write expression
   vector<int> coilList;   // List of coils for WriteCoils command
+  int isMEM;              // Flag for memorized attribute
 
   ETREE *evalTree;
   ETREE *writeTree;

@@ -105,6 +105,8 @@ namespace ModbusComposer_ns
       }
       
     }
+
+    return NULL;
             
   }
 

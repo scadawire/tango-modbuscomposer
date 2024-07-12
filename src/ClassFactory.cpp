@@ -41,7 +41,7 @@ static const char *RcsId = "$Id:  $";
 // #include <tango.h>
 #include "ModbusComposerClass.h"
 //#include <SerialClass.h>
-#include <ModbusClass.h>
+// #include <ModbusClass.h>
 
 //	Add class header files if needed
 

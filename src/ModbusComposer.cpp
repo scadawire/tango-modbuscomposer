@@ -616,6 +616,12 @@ Tango::DevState ModbusComposer::dev_state()
   	statusStr += "Failed to create proxy on modbus device!\n";
   }
 
+  if( modbusDS->state() != Tango::ON )
+  {
+  	argout = Tango::FAULT;
+  	statusStr += "Modbus device is on error!\n";
+  }
+
   if( !selfDS )
   {
   	argout = Tango::FAULT;
@@ -644,7 +650,7 @@ Tango::DevState ModbusComposer::dev_state()
 	  if( !found ) {
 
 	    argout = Tango::ON;
-      statusStr = "The device is ON";
+      statusStr = "The device is ON\n";
 
     } else {
 

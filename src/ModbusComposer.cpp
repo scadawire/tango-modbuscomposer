@@ -602,7 +602,8 @@ Tango::DevState ModbusComposer::dev_state()
 	bool found = false;
 	int i=0;
   VALUE r;
-  
+
+#ifndef EXIT_ON_CONFIGERROR
   //- do some check
   if( modbus_name.empty() )
   {
@@ -634,6 +635,7 @@ Tango::DevState ModbusComposer::dev_state()
   	set_status(statusStr);
   	return argout;
   }
+#endif
 
   try
   {

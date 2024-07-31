@@ -1142,8 +1142,8 @@ int ExpParser::ReadCommandName() {
 
 // -------------------------------------------------------
 
-string TG_STATE[] = { "ON", "OFF", "CLOSE", "OPEN", "INSERT", "EXTRACT", "MOVING", "STANDBY", "FAULT", 
-                      "INIT", "RUNNING", "ALARM", "DISABLE", "UNKNOWN" };
+const string TG_STATE[] = { "ON", "OFF", "CLOSE", "OPEN", "INSERT", "EXTRACT", "MOVING", "STANDBY", "FAULT",
+                            "INIT", "RUNNING", "ALARM", "DISABLE", "UNKNOWN" };
 
 void ExpParser::ReadState() {
 
@@ -1151,7 +1151,7 @@ void ExpParser::ReadState() {
   ReadName(tName);
 
   bool found = false;
-  int nbState = sizeof(TG_STATE)/sizeof(char *);
+  int nbState = (int)( std::end(TG_STATE) - std::begin(TG_STATE) );
   int i = 0;
   
   while( !found && i<nbState ) {

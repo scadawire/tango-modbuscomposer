@@ -1106,6 +1106,9 @@ void ExpParser::ReadType() {
   } else if ( strcasecmp(tName,"DevVarDoubleArray")==0 ) {
     isSpectrum = true;
     type = Tango::DEV_DOUBLE;
+  } else if ( strcasecmp(tName,"DevVarLongArray")==0 ) {
+    isSpectrum = true;
+    type = Tango::DEV_LONG;
   } else if ( strcasecmp(tName,"DevString")==0 ) {
     isSpectrum = false;
     type = Tango::DEV_STRING;

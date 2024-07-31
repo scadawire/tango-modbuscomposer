@@ -169,15 +169,19 @@ class DynSpecAttribute: public Tango::SpectrumAttr {
      _ep->EvaluateRead(&r);
      
      switch(get_type()) {
-       	 
-       case Tango::DEV_DOUBLE:
-       {
-	 Tango::DevDouble *_retDoubleArray = new Tango::DevDouble[r.lgth];
-	 for(int i=0;i<r.lgth;i++) _retDoubleArray[i] = r.value[i];
-	 attr.set_value(_retDoubleArray,r.lgth,0,true);
-       }
-       break;
-       
+
+       case Tango::DEV_DOUBLE: {
+         Tango::DevDouble *_retDoubleArray = new Tango::DevDouble[r.lgth];
+         for(int i=0;i<r.lgth;i++) _retDoubleArray[i] = r.value[i];
+         attr.set_value(_retDoubleArray,r.lgth,0,true);
+       } break;
+
+       case Tango::DEV_LONG: {
+         Tango::DevLong *_retLongArray = new Tango::DevLong[r.lgth];
+         for(int i=0;i<r.lgth;i++) _retLongArray[i] = (Tango::DevLong)r.value[i];
+         attr.set_value(_retLongArray,r.lgth,0,true);
+       } break;
+
      }
             
    }

@@ -157,10 +157,10 @@ ADDITIONAL_OBJS = \
 #
 include $(MAKE_ENV)/common_target.opt
 
-$(OBJDIR)/ExpParserTst.o: ExpParserTst.cpp 
+$(OBJDIR)/ExpParserTst.o: ../test/ExpParserTst.cpp 
 	$(CC) $(CXXFLAGS) -c $< -o $(OBJDIR)/ExpParserTst.o
 ExpParserTst: $(LIB_OBJS) $(OBJDIR)/ExpParserTst.o
-	g++ $(LDFLAGS) $(OBJDIR)/ExpParserTst.o $(LIB_OBJS) -o ExpParserTst
+	g++ $(OBJDIR)/ExpParserTst.o $(LIB_OBJS) -o ExpParserTst $(LDFLAGS)
 
 $(OBJDIR)/SerialClass.o: $(SERIAL_DIR)/SerialClass.cpp
 	$(CC) $(CXXFLAGS) -c $< -o $(OBJDIR)/SerialClass.o

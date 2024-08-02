@@ -129,6 +129,12 @@ void ModbusComposer::delete_device()
 	/*----- PROTECTED REGION ID(ModbusComposer::delete_device) ENABLED START -----*/
 	
 	//	Delete device allocated objects
+  if( useCache || useCoilCache ) {
+    useCache=false;
+    useCoilCache=false;
+    cacheThread->join(NULL);
+  }
+
 	if(modbusDS) {
 		delete modbusDS;
 		modbusDS = 0;
@@ -137,11 +143,6 @@ void ModbusComposer::delete_device()
   	delete stateMap[i].ep;
   }
   stateMap.clear();
-	if( useCache || useCoilCache ) {
-	  useCache=false;
-	  useCoilCache=false;
-	  cacheThread->join(NULL);
-	}
 
 	if( Tango::Util::instance()->is_svr_shutting_down() ||
             Tango::Util::instance()->is_device_restarting(get_name()) ) {

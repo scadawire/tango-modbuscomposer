@@ -177,6 +177,7 @@ int main(int argc,char* argv[]) {
   //TestState(ep,"ALARM=freg(20)>1.5");
   //TestState(ep,"FAULT=Flag(15,15),Fault on reg 15");
   //TestState(ep,"STT=Flag(15,15)");
+  Test(ep,"toto=DevLong(1 + 1 + 1 + 1)",4);
 
   return 0;
 

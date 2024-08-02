@@ -1,0 +1,9 @@
+src/.idea/
+src/bin/
+src/cmake-build-debug/
+src/cmake-build-release/
+src/obj/
+src/build/
+doc/doc_html/*.html
+doc/doc_html/*.pdf
+src/doc_html
